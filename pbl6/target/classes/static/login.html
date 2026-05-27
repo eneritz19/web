@@ -4,15 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LangiLeak - Login</title>
+
   <link rel="stylesheet" href="css/style.css">
+
   <style>
     form {
       background-color: white;
       padding: 30px;
       border-radius: 10px;
       display: inline-block;
-      box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
     }
+
     input {
       padding: 12px;
       margin: 10px 0;
@@ -21,6 +24,7 @@
       border-radius: 6px;
       font-size: 14px;
     }
+
     .back-link {
       display: block;
       margin-top: 15px;
@@ -28,6 +32,7 @@
       text-decoration: none;
       font-weight: bold;
     }
+
     #error-message {
       color: red;
       font-weight: bold;
@@ -35,58 +40,104 @@
     }
   </style>
 </head>
+
 <body>
 
-  <header>
-    <h1>LangiLeak</h1>
-  </header>
+<header>
+  <h1>LangiLeak</h1>
+</header>
 
-  <main>
-    <h2>Saioa Hasi (Iniciar Sesión)</h2>
+<main>
 
-    <div id="error-message"></div>
+  <h2>Saioa Hasi</h2>
 
-    <form id="loginForm">
-      <div>
-        <input type="text" id="username" placeholder="Erabiltzailea (Usuario)" required>
-      </div>
-      <div>
-        <input type="password" id="password" placeholder="Pasahitza (Contraseña)" required>
-      </div>
-      <button type="submit">Sartu</button>
-    </form>
+  <div id="error-message"></div>
 
-    <a href="index.html" class="back-link">← Atzera</a>
-  </main>
+  <form id="loginForm">
 
-  <script>
-    document.getElementById('loginForm').addEventListener('submit', function(e) {
-      e.preventDefault(); // Evita que la página se rompa o recargue mal
-      
-      const user = document.getElementById('username').value;
-      const pass = document.getElementById('password').value;
-      const errorDiv = document.getElementById('error-message');
+    <div>
+      <input type="text"
+             id="username"
+             placeholder="Erabiltzailea"
+             required>
+    </div>
 
-      // Enviamos los datos al servidor de forma segura
-      fetch(`/api/login?username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`, {
-        method: 'POST'
-      })
-      .then(response => response.text())
-      .then(resultado => {
+    <div>
+      <input type="password"
+             id="password"
+             placeholder="Pasahitza"
+             required>
+    </div>
+
+    <button type="submit">Sartu</button>
+
+  </form>
+
+  <a href="index.html" class="back-link">← Atzera</a>
+
+</main>
+
+<script>
+
+document.getElementById("loginForm")
+.addEventListener("submit", function(e) {
+
+    e.preventDefault();
+
+    const user = document.getElementById("username").value;
+    const pass = document.getElementById("password").value;
+
+    const errorDiv = document.getElementById("error-message");
+
+    fetch("/api/login", {
+
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+            username: user,
+            password: pass
+        })
+
+    })
+
+    .then(response => response.text())
+
+    .then(resultado => {
+
         if (resultado === "OK") {
-          errorDiv.innerText = "";
-          // ¡MAGIA! Abre una pestaña nueva con tu página de fondo rojo
-          window.open('main.html', '_blank');
+
+            localStorage.setItem("username", user);
+
+            window.location.href = "main.html";
+
         } else if (resultado === "Ez da existitzen") {
-          errorDiv.innerText = "Errorea: Erabiltzailea ez da existitzen.";
+
+            errorDiv.innerText =
+              "Errorea: erabiltzailea ez da existitzen.";
+
         } else {
-          errorDiv.innerText = "Errorea: Pasahitz okerra.";
+
+            errorDiv.innerText =
+              "Errorea: pasahitz okerra.";
+
         }
-      })
-      .catch(err => {
-        errorDiv.innerText = "Errorea zerbitzarian. Ziurtatu proiektua por t8080 dabilela.";
-      });
+
+    })
+
+    .catch(error => {
+
+        errorDiv.innerText =
+          "Errorea zerbitzarian.";
+
     });
-  </script>
+
+});
+
+</script>
+
 </body>
 </html>

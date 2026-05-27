@@ -2,17 +2,23 @@
 <html lang="eu">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LangiLeak - Kontua Sortu</title>
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+  <title>LangiLeak - Register</title>
+
   <link rel="stylesheet" href="css/style.css">
+
   <style>
+
     form {
       background-color: white;
       padding: 30px;
       border-radius: 10px;
       display: inline-block;
-      box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
     }
+
     input {
       padding: 12px;
       margin: 10px 0;
@@ -21,37 +27,95 @@
       border-radius: 6px;
       font-size: 14px;
     }
-    .back-link {
-      display: block;
-      margin-top: 15px;
-      color: #1e3a5f;
-      text-decoration: none;
-      font-weight: bold;
-    }
+
   </style>
 </head>
+
 <body>
 
-  <header>
-    <h1>LangiLeak</h1>
-  </header>
+<header>
+  <h1>LangiLeak</h1>
+</header>
 
-  <main>
-    <h2>Kontua Sortu (Registrarse)</h2>
+<main>
 
-    <form action="/api/register" method="POST">
-      <div>
-        <input type="text" name="username" placeholder="Erabiltzailea (Usuario)" required>
-      </div>
-      <div>
-        <input type="password" name="password" placeholder="Pasahitza (Contraseña)" required>
-      </div>
-      <button type="submit">Eman izena</button>
-    </form>
+  <h2>Kontua Sortu</h2>
 
-    <a href="index.html" class="back-link">← Atzera</a>
-  </main>
+  <form id="registerForm">
 
-  <script src="js/app.js"></script>
+    <div>
+      <input type="text"
+             id="username"
+             placeholder="Erabiltzailea"
+             required>
+    </div>
+
+    <div>
+      <input type="password"
+             id="password"
+             placeholder="Pasahitza"
+             required>
+    </div>
+
+    <button type="submit">Eman izena</button>
+
+  </form>
+
+  <p id="mensaje"></p>
+
+</main>
+
+<script>
+
+document.getElementById("registerForm")
+.addEventListener("submit", function(e) {
+
+    e.preventDefault();
+
+    const user =
+      document.getElementById("username").value;
+
+    const pass =
+      document.getElementById("password").value;
+
+    fetch("/api/register", {
+
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+            username: user,
+            password: pass
+        })
+
+    })
+
+    .then(response => response.text())
+
+    .then(resultado => {
+
+        const mensaje =
+          document.getElementById("mensaje");
+
+        if(resultado === "OK") {
+
+            mensaje.innerText =
+              "Erabiltzailea sortuta!";
+
+        } else {
+
+            mensaje.innerText = resultado;
+
+        }
+
+    });
+
+});
+
+</script>
+
 </body>
 </html>
