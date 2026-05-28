@@ -20,6 +20,7 @@ public class EcoMoveService {
     private static final String REWARDS_FILE = "recompensas.csv";
     private static final String REDEMPTIONS_FILE = "canjeos.csv";
     private static final String LINES_FILE = "lineas_transporte.csv";
+    private static final String STOPS_FILE = "paradas_transporte.csv";
     private static final String ROUTES_FILE = "rutas_recomendadas.csv";
     private static final String ROUTE_STEPS_FILE = "ruta_pasos.csv";
     private static final String OFFERS_FILE = "carpool_ofertas.csv";
@@ -241,6 +242,30 @@ public class EcoMoveService {
                 row.getOrDefault("status", "garaiz"),
                 parseInt(row.get("stops"))
         )).toList();
+    }
+
+    public List<TransportStop> getTransportStops(String proveedor, Integer limit) {
+        int max = limit == null || limit <= 0 ? 40 : Math.min(limit, 250);
+        String filter = proveedor == null ? "" : proveedor.trim();
+
+        return csv.readRows(STOPS_FILE).stream()
+                .filter(row -> filter.isBlank() || row.getOrDefault("proveedor", "").equalsIgnoreCase(filter))
+                .limit(max)
+                .map(row -> new TransportStop(
+                        row.getOrDefault("paradaID", ""),
+                        row.getOrDefault("proveedor", ""),
+                        row.getOrDefault("stopID", ""),
+                        row.getOrDefault("stopCode", ""),
+                        row.getOrDefault("nombre", ""),
+                        row.getOrDefault("descripcion", ""),
+                        parseDouble(row.get("latitud")),
+                        parseDouble(row.get("longitud")),
+                        row.getOrDefault("zona", ""),
+                        row.getOrDefault("municipio", ""),
+                        row.getOrDefault("locationType", ""),
+                        row.getOrDefault("accesible", "")
+                ))
+                .toList();
     }
 
     public List<Reward> getRewards(String category) {

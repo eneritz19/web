@@ -103,3 +103,27 @@ matomoEvent('Carpool', 'offer', 'publish');
 ## Nota para Google Cloud Run
 
 Para una demo local o entrega, CSV local está bien. En Cloud Run, los archivos locales del contenedor no son persistentes si el servicio se reinicia. Para producción, lo correcto sería guardar estos CSV en Cloud Storage o usar una base de datos.
+
+## Datos reales de transporte
+
+Se han sustituido los datos de transporte inventados por datos generados desde los tres ficheros `stops.txt` aportados:
+
+- `ekialdebus_stops.txt`
+- `euskotren_stops.txt`
+- `bizkaibus_stops.txt`
+
+Archivos generados dentro de `data/`:
+
+- `lineas_transporte.csv`: resumen para la pantalla de Garraioa. Agrupa los datos por proveedor y zonas/municipios principales.
+- `paradas_transporte.csv`: listado completo normalizado de paradas reales con proveedor, nombre, descripción, latitud, longitud, zona y municipio.
+
+Endpoints útiles:
+
+- `GET /api/transport-lines`
+- `GET /api/transport-stops?proveedor=Ekialdebus&limit=20`
+- `GET /api/transport-stops?proveedor=Euskotren&limit=20`
+- `GET /api/transport-stops?proveedor=Bizkaibus&limit=20`
+- `GET /api/csv/transport-lines`
+- `GET /api/csv/transport-stops`
+
+Nota: los TXT contenían paradas, no horarios ni líneas reales completas. Por eso `lineas_transporte.csv` es un resumen agrupado para que la pantalla actual pueda seguir funcionando, mientras que `paradas_transporte.csv` conserva la información real de paradas.
