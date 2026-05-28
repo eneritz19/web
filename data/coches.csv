@@ -1,6 +1,86 @@
 modeloCocheID,marca,modelo,tipo,emisionesKgKm
-SIN_COCHE,Sin coche,Sin coche,Ninguno,0
-TESLA_MODEL_3,Tesla,Model 3,Electrico,0
+SIN_COCHE,Sin coche,Sin coche,Ninguno,0.0
+TESLA_MODEL_3,Tesla,Model 3,Electrico,0.0
 TOYOTA_COROLLA,Toyota,Corolla,Hibrido,0.09
 RENAULT_CLIO,Renault,Clio,Gasolina,0.12
 VW_GOLF,Volkswagen,Golf,Diesel,0.14
+NISSAN_LEAF,Nissan,Leaf,Electrico,0.0
+HYUNDAI_IONIQ_5,Hyundai,Ioniq 5,Electrico,0.0
+KIA_EV6,Kia,EV6,Electrico,0.0
+BMW_I4,BMW,i4,Electrico,0.0
+AUDI_E_TRON,Audi,e-tron,Electrico,0.0
+TOYOTA_YARIS_H,Toyota,Yaris,Hibrido,0.08
+HONDA_CIVIC_H,Honda,Civic,Hibrido,0.09
+HYUNDAI_TUCSON_H,Hyundai,Tucson,Hibrido,0.11
+KIA_SPORTAGE_H,Kia,Sportage,Hibrido,0.11
+FORD_KUGA_PHEV,Ford,Kuga,Hibrido,0.03
+PEUGEOT_208_G,Peugeot,208,Gasolina,0.11
+SEAT_IBIZA_G,Seat,Ibiza,Gasolina,0.12
+DACIA_SANDERO_G,Dacia,Sandero,Gasolina,0.12
+FIAT_500_G,Fiat,500,Gasolina,0.1
+FORD_FIESTA_G,Ford,Fiesta,Gasolina,0.11
+MAZDA_3_G,Mazda,3,Gasolina,0.12
+VOLVO_XC40_G,Volvo,XC40,Gasolina,0.15
+MERCEDES_A_D,Mercedes-Benz,Clase A,Diesel,0.12
+BMW_320D,BMW,Serie 3,Diesel,0.13
+AUDI_A4_D,Audi,A4,Diesel,0.13
+PEUGEOT_3008_D,Peugeot,3008,Diesel,0.13
+CITROEN_C3_D,Citroën,C3,Diesel,0.11
+RENAULT_MEGANE_D,Renault,Megane,Diesel,0.12
+VW_TIGUAN_D,Volkswagen,Tiguan,Diesel,0.15
+SKODA_OCTAVIA_D,Skoda,Octavia,Diesel,0.11
+PORSCHE_TAYCAN,Porsche,Taycan,Electrico,0.0
+BYD_ATTO_3,BYD,Atto 3,Electrico,0.0
+MG_4,MG,MG4,Electrico,0.0
+CUPRA_FORMENTOR_H,Cupra,Formentor,Hibrido,0.03
+LEXUS_UX_H,Lexus,UX,Hibrido,0.12
+JEEP_COMPASS_G,Jeep,Compass,Gasolina,0.15
+ALFA_ROMEO_TONALE,Alfa Romeo,Tonale,Hibrido,0.13
+SUBARU_OUTBACK,Subaru,Outback,Gasolina,0.17
+MITSUBISHI_ASX,Mitsubishi,ASX,Hibrido,0.11
+LAND_ROVER_EVOQUE,Land Rover,Range Rover Evoque,Diesel,0.16
+TESLA_MODEL_Y,Tesla,Model Y,Electrico,0.0
+VW_ID4,Volkswagen,ID.4,Electrico,0.0
+RENAULT_ZOE,Renault,Zoe,Electrico,0.0
+FIAT_500E,Fiat,500e,Electrico,0.0
+PEUGEOT_E208,Peugeot,e-208,Electrico,0.0
+DACIA_SPRING,Dacia,Spring,Electrico,0.0
+BMW_IX3,BMW,iX3,Electrico,0.0
+AUDI_Q4_ETRON,Audi,Q4 e-tron,Electrico,0.0
+POLESTAR_2,Polestar,2,Electrico,0.0
+TOYOTA_RAV4_H,Toyota,RAV4,Hibrido,0.1
+TOYOTA_CH_R,Toyota,C-HR,Hibrido,0.08
+HONDA_HRV_H,Honda,HR-V,Hibrido,0.12
+HYUNDAI_KONA_H,Hyundai,Kona,Hibrido,0.1
+KIA_NIRO_H,Kia,Niro,Hibrido,0.1
+RENAULT_ARKANA_H,Renault,Arkana,Hibrido,0.11
+NISSAN_QASHQAI_H,Nissan,Qashqai,Hibrido,0.12
+FORD_PUMA_G,Ford,Puma,Gasolina,0.12
+SEAT_LEON_G,Seat,Leon,Gasolina,0.13
+SEAT_ATECA_G,Seat,Ateca,Gasolina,0.14
+OPEL_CORSA_G,Opel,Corsa,Gasolina,0.11
+PEUGEOT_2008_G,Peugeot,2008,Gasolina,0.12
+CITROEN_C4_G,Citroën,C4,Gasolina,0.12
+VOLVO_XC60_G,Volvo,XC60,Gasolina,0.17
+SKODA_FABIA_G,Skoda,Fabia,Gasolina,0.11
+MAZDA_CX5_G,Mazda,CX-5,Gasolina,0.15
+VW_POLO_G,Volkswagen,Polo,Gasolina,0.12
+VW_PASSAT_D,Volkswagen,Passat,Diesel,0.13
+MERCEDES_C_D,Mercedes-Benz,Clase C,Diesel,0.13
+MERCEDES_GLC_D,Mercedes-Benz,GLC,Diesel,0.16
+BMW_520D,BMW,Serie 5,Diesel,0.14
+AUDI_A6_D,Audi,A6,Diesel,0.14
+AUDI_Q3_D,Audi,Q3,Diesel,0.15
+PEUGEOT_5008_D,Peugeot,5008,Diesel,0.14
+RENAULT_KAPTUR_G,Renault,Captur,Gasolina,0.13
+DACIA_DUSTER_D,Dacia,Duster,Diesel,0.13
+MINI_COOPER_G,MINI,Cooper,Gasolina,0.13
+SUZUKI_VITARA,Suzuki,Vitara,Hibrido,0.12
+SUBARU_XV,Subaru,XV,Hibrido,0.15
+LEXUS_NX_H,Lexus,NX,Hibrido,0.13
+JEEP_RENEGADE_G,Jeep,Renegade,Gasolina,0.14
+CUPRA_LEON_H,Cupra,Leon,Hibrido,0.03
+MG_ZS_G,MG,ZS,Gasolina,0.15
+BYD_SEAL,BYD,Seal,Electrico,0.0
+PORSCHE_911,Porsche,911 Carrera,Gasolina,0.22
+FORD_MUSTANG_MACH_E,Ford,Mustang Mach-E,Electrico,0.0
