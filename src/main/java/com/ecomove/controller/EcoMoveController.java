@@ -74,6 +74,14 @@ public class EcoMoveController {
         return service.getTransportLines();
     }
 
+    @GetMapping("/transport-stops")
+    public List<TransportStop> transportStops(
+            @RequestParam(required = false) String proveedor,
+            @RequestParam(required = false) Integer limit
+    ) {
+        return service.getTransportStops(proveedor, limit);
+    }
+
     @GetMapping("/rewards")
     public List<Reward> rewards(@RequestParam(required = false) String category) {
         return service.getRewards(category);
@@ -135,5 +143,15 @@ public class EcoMoveController {
     @GetMapping(value = "/csv/rewards", produces = "text/csv;charset=UTF-8")
     public String rewardsCsv() {
         return service.exportCsv("recompensas.csv");
+    }
+
+    @GetMapping(value = "/csv/transport-lines", produces = "text/csv;charset=UTF-8")
+    public String transportLinesCsv() {
+        return service.exportCsv("lineas_transporte.csv");
+    }
+
+    @GetMapping(value = "/csv/transport-stops", produces = "text/csv;charset=UTF-8")
+    public String transportStopsCsv() {
+        return service.exportCsv("paradas_transporte.csv");
     }
 }

@@ -3,4 +3,5 @@ userID,empresaID,nombre,apellidos,nombreUsuario,contrasena,email,tieneCoche,mode
 2,101,Ane,Zabala,anez,123456,anez@ecomove.eus,false,SIN_COCHE,Getxo
 3,102,Mikel,Etxea,mikele,123456,mikel@aldundia.eus,true,TOYOTA_COROLLA,Basauri
 4,102,Leire,Aguirre,leirea,123456,leire@aldundia.eus,false,SIN_COCHE,Leioa
-5,101,ene,grana,eneg,1234,ene@ecomove.eus,false,SIN_COCHE,Bilbo
+5,101,Nerea,Mendizabal,nerea,123456,nerea@ecomove.eus,true,RENAULT_CLIO,Bilbo
+6,101,Nerea3,Mendizabal,nerea3,123456,nerea3@ecomove.eus,false,SIN_COCHE,Bilbo

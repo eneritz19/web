@@ -5,6 +5,7 @@ const state = {
     dashboard: null,
     riders: [],
     lines: [],
+    transportStops: [],
     rewards: [],
     corporate: null,
     companies: [],
@@ -126,6 +127,13 @@ async function ensureData() {
     if (!state.dashboard) tasks.push(api(`/api/dashboard?userId=${userId}`).then(data => state.dashboard = data));
     if (!state.riders.length) tasks.push(api(`/api/riders?userId=${userId}`).then(data => state.riders = data));
     if (!state.lines.length) tasks.push(api('/api/transport-lines').then(data => state.lines = data));
+    if (!state.transportStops.length) {
+        tasks.push(Promise.all([
+            api('/api/transport-stops?proveedor=Ekialdebus&limit=8'),
+            api('/api/transport-stops?proveedor=Euskotren&limit=8'),
+            api('/api/transport-stops?proveedor=Bizkaibus&limit=8')
+        ]).then(groups => state.transportStops = groups.flat()));
+    }
     if (!state.rewards.length) tasks.push(api('/api/rewards').then(data => state.rewards = data));
     if (!state.corporate) tasks.push(api(`/api/corporate?userId=${userId}`).then(data => state.corporate = data));
     await Promise.all(tasks);
@@ -740,6 +748,25 @@ function renderTransport() {
                         </tbody>
                     </table>
                 </article>
+                <article class="card" style="padding:0;overflow:hidden">
+                    <div style="padding:22px">
+                        <h2 style="margin:0">Parada errealak</h2>
+                        <p style="margin:6px 0 0;color:var(--muted);font-weight:800">paradas_transporte.csv fitxategitik irakurrita</p>
+                    </div>
+                    <table class="table">
+                        <thead><tr><th>Hornitzailea</th><th>Parada</th><th>Herria/Zona</th><th>Koordenatuak</th></tr></thead>
+                        <tbody>
+                            ${state.transportStops.map(stop => `
+                                <tr>
+                                    <td><span class="badge">${escapeHtml(stop.proveedor)}</span></td>
+                                    <td>${escapeHtml(stop.nombre)}</td>
+                                    <td>${escapeHtml(stop.municipio || stop.zona)}</td>
+                                    <td><small>${Number(stop.latitud).toFixed(4)}, ${Number(stop.longitud).toFixed(4)}</small></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </article>
             </div>
             <aside style="display:grid;gap:18px;align-content:start">
                 <form class="card" onsubmit="searchRoute(event)">
@@ -749,8 +776,8 @@ function renderTransport() {
                     <button class="btn" style="width:100%">Ibilbidea bilatu</button>
                 </form>
                 <article class="card bg-blue" style="border-color:#bae6fd">
-                    <strong>🔵 Bilboko Metroa</strong>
-                    <p style="font-weight:700;color:#075985">M1: Basauri ↔ Plentzia · M2: Basauri ↔ Santurtzi. Denbora errealeko informazioa.</p>
+                    <strong>📍 CSV errealak</strong>
+                    <p style="font-weight:700;color:#075985">Parada datuak paradas_transporte.csv fitxategitik datoz: Ekialdebus, Euskotren eta Bizkaibus.</p>
                 </article>
             </aside>
         </section>

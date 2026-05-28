@@ -15,6 +15,3 @@ tripID,userID,fecha,origen,destino,km,co2,modo,duracionMin,puntos,icono
 14,4,2026-02-19,Leioa,Getxo,6.5,0.9,Bizikleta,25,10,🚲
 15,4,2026-04-25,Bilbo,Leioa,13.6,2.0,Metroa,36,12,🚇
 16,5,2026-05-28,Bilbo,EcoMove helmuga,12.5,1.9,Autobusa,30,10,🚌
-17,5,2026-05-28,Bilbo,EcoMove helmuga,12.5,1.9,Autobusa,30,10,🚌
-18,5,2026-05-28,Bilbo,EcoMove helmuga,12.5,1.9,Autobusa,30,10,🚌
-19,5,2026-05-28,Bilbo,EcoMove helmuga,12.5,1.9,Autobusa,30,10,🚌
