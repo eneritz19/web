@@ -1,12 +1,14 @@
 package com.ecomove.model;
 
 public record User(
-        long usuarioID,
+        long userID,
         long empresaID,
         String nombre,
-        String apellido,
+        String apellidos,
+        String nombreUsuario,
+        String contrasena,
         String email,
-        String password,
-        String modelococheID,
-        String publiCiudad
+        boolean tieneCoche,
+        String modeloCocheID,
+        String puebloCiudad
 ) {}

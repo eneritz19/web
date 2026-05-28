@@ -3,36 +3,45 @@ package com.ecomove.service;
 import com.ecomove.model.*;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class EcoMoveService {
+
+    private static final String TRIPS_FILE = "viajes.csv";
+    private static final String REWARDS_FILE = "recompensas.csv";
+    private static final String REDEMPTIONS_FILE = "canjeos.csv";
+    private static final String LINES_FILE = "lineas_transporte.csv";
+    private static final String ROUTES_FILE = "rutas_recomendadas.csv";
+    private static final String ROUTE_STEPS_FILE = "ruta_pasos.csv";
+    private static final String OFFERS_FILE = "carpool_ofertas.csv";
+    private static final String JOINS_FILE = "carpool_uniones.csv";
+
+    private static final List<String> TRIP_HEADERS = List.of(
+            "tripID", "userID", "fecha", "origen", "destino", "km", "co2", "modo", "duracionMin", "puntos", "icono"
+    );
+    private static final List<String> REDEMPTION_HEADERS = List.of("redencionID", "userID", "rewardID", "fecha", "puntos");
+    private static final List<String> OFFER_HEADERS = List.of("offerID", "userID", "origen", "destino", "time", "seats", "active", "distance", "rating");
+    private static final List<String> JOIN_HEADERS = List.of("joinID", "userID", "riderName", "fecha");
+
     private final UserCsvService userCsvService;
+    private final CsvDataService csv;
 
-    public EcoMoveService(UserCsvService userCsvService) {
+    public EcoMoveService(UserCsvService userCsvService, CsvDataService csv) {
         this.userCsvService = userCsvService;
+        this.csv = csv;
     }
 
-    private final UserProfile currentUser = new UserProfile(
-            1L,
-            "Jon Urrutia",
-            "JU",
-            "jon.urrutia@ecomove.eus",
-            "Bizkaiko Foru Aldundia",
-            "IT Saila",
-            5,
-            1240,
-            47,
-            "847 kg",
-            "Ekologista Aurreratua");
-
-    public UserProfile getCurrentUser() {
-        return currentUser;
-    }
-
-    public AuthResponse login(AuthRequest request) {
-
-        var userOptional = userCsvService.findByEmail(request.email());
+    public AuthResponse login(LoginRequest request) {
+        Optional<User> userOptional = userCsvService.findByNombreUsuario(request.nombreUsuario());
 
         if (userOptional.isEmpty()) {
             return new AuthResponse(false, "Usuario no encontrado", null);
@@ -40,154 +49,208 @@ public class EcoMoveService {
 
         User user = userOptional.get();
 
-        if (!user.password().equals(request.password())) {
+        if (!user.contrasena().equals(request.contrasena())) {
             return new AuthResponse(false, "Contraseña incorrecta", null);
         }
 
-        UserProfile profile = new UserProfile(
-                user.usuarioID(),
-                user.nombre() + " " + user.apellido(),
-                getInitials(user.nombre() + " " + user.apellido()),
-                user.email(),
-                "EcoMove",
-                "Erabiltzailea",
-                1,
-                0,
-                0,
-                "0 kg",
-                "Hasiberria");
-
-        return new AuthResponse(true, "Login correcto", profile);
+        return new AuthResponse(true, "Login correcto", buildProfile(user));
     }
 
-    public AuthResponse register(AuthRequest request) {
-
-        if (userCsvService.findByEmail(request.email()).isPresent()) {
-            return new AuthResponse(false, "El usuario ya existe", null);
+    public AuthResponse register(RegisterRequest request) {
+        if (userCsvService.findByNombreUsuario(request.nombreUsuario()).isPresent()) {
+            return new AuthResponse(false, "El nombre de usuario ya existe", null);
         }
 
-        String[] parts = request.name().split(" ");
+        if (request.email() != null && !request.email().isBlank() && userCsvService.findByEmail(request.email()).isPresent()) {
+            return new AuthResponse(false, "El email ya existe", null);
+        }
 
-        String nombre = parts[0];
-        String apellido = parts.length > 1 ? parts[1] : "";
+        String modeloCoche = request.tieneCoche()
+                ? safe(request.modeloCocheID(), "SIN_COCHE")
+                : "SIN_COCHE";
 
-        long newId = userCsvService.getAllUsers().size() + 1;
+        long newId = userCsvService.nextUserId();
+        String email = request.email() == null || request.email().isBlank()
+                ? request.nombreUsuario() + "@ecomove.local"
+                : request.email();
 
         User user = new User(
                 newId,
-                101,
-                nombre,
-                apellido,
-                request.email(),
-                request.password(),
-                "Sin coche",
-                "Bilbo");
+                request.empresaID(),
+                request.nombre(),
+                request.apellidos(),
+                request.nombreUsuario(),
+                request.contrasena(),
+                email,
+                request.tieneCoche(),
+                modeloCoche,
+                request.puebloCiudad()
+        );
 
         userCsvService.saveUser(user);
 
-        UserProfile profile = new UserProfile(
-                newId,
-                request.name(),
-                getInitials(request.name()),
-                request.email(),
-                "EcoMove",
-                "Erabiltzailea",
-                1,
-                0,
-                0,
-                "0 kg",
-                "Hasiberria");
-
-        return new AuthResponse(true, "Usuario registrado correctamente", profile);
+        return new AuthResponse(true, "Usuario registrado correctamente", buildProfile(user));
     }
 
-    public DashboardResponse getDashboard() {
+    public UserProfile getProfile(long userId) {
+        return buildProfile(getUser(userId));
+    }
+
+    public DashboardResponse getDashboard(long userId) {
+        User user = getUser(userId);
         return new DashboardResponse(
-                currentUser,
-                getStats(),
-                getMonthlyStats(),
-                getTransportShare(),
-                getRecentTrips(),
-                getRecommendedRoute());
+                buildProfile(user),
+                getStats(user.userID()),
+                getMonthlyStats(user.userID()),
+                getTransportShare(user.userID()),
+                getRecentTrips(user.userID()),
+                getRecommendedRoute(user.userID())
+        );
     }
 
-    public List<StatCard> getStats() {
+    public List<StatCard> getStats(long userId) {
+        List<Map<String, String>> trips = userTripRows(userId);
+        double co2 = trips.stream().mapToDouble(row -> parseDouble(row.get("co2"))).sum();
+        double cleanKm = trips.stream()
+                .filter(row -> !row.getOrDefault("modo", "").equalsIgnoreCase("Autoa"))
+                .mapToDouble(row -> parseDouble(row.get("km"))).sum();
+        int points = trips.stream().mapToInt(row -> parseInt(row.get("puntos"))).sum() - redeemedPoints(userId);
+        int tripCount = trips.size();
+        int level = Math.max(1, 1 + points / 250);
+
         return List.of(
-                new StatCard("CO₂ Aurreztua", "847 kg", "Aurten · %23↓ iaz baino", "🌳", "green"),
-                new StatCard("Bidaiak", "47", "Azken 30 egunetan", "🧭", "blue"),
-                new StatCard("Nire Puntuak", "1.240", "+180 aste honetan", "⭐", "yellow"),
-                new StatCard("Km garbi", "312 km", "Autorik gabe", "🚆", "purple"));
+                new StatCard("CO₂ Aurreztua", formatKg(co2), "Datuak data/viajes.csv fitxategitik", "🌳", "green"),
+                new StatCard("Bidaiak", String.valueOf(tripCount), "Erabiltzaile honen bidaiak", "🧭", "blue"),
+                new StatCard("Nire Puntuak", formatNumber(points), "Canjeoak kenduta", "⭐", "yellow"),
+                new StatCard("Km garbi", formatOne(cleanKm) + " km", "Autorik gabe", "🚆", "purple")
+        );
     }
 
-    public List<MonthlyStat> getMonthlyStats() {
-        return List.of(
-                new MonthlyStat("Urt", 18.2, 62),
-                new MonthlyStat("Ots", 14.5, 51),
-                new MonthlyStat("Mar", 16.8, 58),
-                new MonthlyStat("Api", 11.2, 42),
-                new MonthlyStat("Mai", 8.7, 35),
-                new MonthlyStat("Eka", 6.1, 28));
+    public List<MonthlyStat> getMonthlyStats(long userId) {
+        Map<String, double[]> byMonth = new LinkedHashMap<>();
+
+        for (Map<String, String> row : userTripRows(userId)) {
+            String month = monthName(row.get("fecha"));
+            double[] values = byMonth.computeIfAbsent(month, key -> new double[]{0.0, 0.0});
+            values[0] += parseDouble(row.get("co2"));
+            values[1] += parseDouble(row.get("km"));
+        }
+
+        return byMonth.entrySet().stream()
+                .map(entry -> new MonthlyStat(entry.getKey(), roundOne(entry.getValue()[0]), (int) Math.round(entry.getValue()[1])))
+                .toList();
     }
 
-    public List<TransportShare> getTransportShare() {
-        return List.of(
-                new TransportShare("Oinez", 32),
-                new TransportShare("Bizikleta", 24),
-                new TransportShare("Autobusa", 30),
-                new TransportShare("Autoa", 14));
+    public List<TransportShare> getTransportShare(long userId) {
+        List<Map<String, String>> trips = userTripRows(userId);
+
+        if (trips.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, Long> counts = trips.stream().collect(Collectors.groupingBy(
+                row -> row.getOrDefault("modo", "Besteak"),
+                LinkedHashMap::new,
+                Collectors.counting()
+        ));
+
+        int total = trips.size();
+        return counts.entrySet().stream()
+                .map(entry -> new TransportShare(entry.getKey(), (int) Math.round((entry.getValue() * 100.0) / total)))
+                .toList();
     }
 
-    public List<Trip> getRecentTrips() {
-        return List.of(
-                new Trip(1, "Bilbo", "Getxo", "18.2 km", "0 kg", "Autobusa", "Gaur, 08:32", "🚌", "+12 pts"),
-                new Trip(2, "Bilbo", "Basauri", "12.4 km", "0 kg", "Metroa", "Atzo, 17:45", "🚇", "+8 pts"),
-                new Trip(3, "Leioa", "Bilbo", "15.8 km", "0.3 kg", "Karpoola", "Atz.-herenegun", "🚗", "+15 pts"),
-                new Trip(4, "Bilbo", "Sestao", "9.1 km", "0 kg", "Tranbaia", "Dema.", "🚋", "+6 pts"));
+    public List<Trip> getRecentTrips(long userId) {
+        return userTripRows(userId).stream()
+                .sorted(Comparator.comparing((Map<String, String> row) -> row.getOrDefault("fecha", "")).reversed())
+                .limit(8)
+                .map(this::toTrip)
+                .toList();
     }
 
-    public RouteRecommendation getRecommendedRoute() {
+    public RouteRecommendation getRecommendedRoute(long userId) {
+        Optional<Map<String, String>> route = csv.readRows(ROUTES_FILE).stream()
+                .filter(row -> parseLong(row.get("userID")) == userId)
+                .findFirst();
+
+        Map<String, String> row = route.orElseGet(() -> csv.readRows(ROUTES_FILE).stream().findFirst().orElse(Map.of()));
+        long routeId = parseLong(row.get("routeID"));
+
+        List<RouteStep> steps = csv.readRows(ROUTE_STEPS_FILE).stream()
+                .filter(step -> parseLong(step.get("routeID")) == routeId)
+                .sorted(Comparator.comparingInt(step -> parseInt(step.get("orden"))))
+                .map(step -> new RouteStep(
+                        step.getOrDefault("icon", "•"),
+                        step.getOrDefault("label", "Pausoa"),
+                        step.getOrDefault("detail", "")
+                ))
+                .toList();
+
         return new RouteRecommendation(
-                "Bilbo · Abando",
-                "Getxo · Las Arenas",
-                "38 min",
-                "18.2 km",
-                "0 kg",
-                List.of(
-                        new RouteStep("🚶", "Oinez", "5 min"),
-                        new RouteStep("🚇", "Metro M1", "20 min"),
-                        new RouteStep("🚌", "Autobusa A3", "13 min")));
+                row.getOrDefault("origen", "Bilbo"),
+                row.getOrDefault("destino", "Getxo"),
+                row.getOrDefault("duracion", "0 min"),
+                row.getOrDefault("distance", "0 km"),
+                row.getOrDefault("co2", "0 kg"),
+                steps
+        );
     }
 
-    public List<Rider> getRiders() {
-        return List.of(
-                new Rider(1, "Ane Zabala", "0.3 km", 4.8, "Bilbo → Getxo", "08:15", true, "AZ", "IT Saila"),
-                new Rider(2, "Mikel Etxea", "0.7 km", 4.6, "Bilbo → Basauri", "08:30", true, "ME", "Finantza"),
-                new Rider(3, "Leire Aguirre", "1.2 km", 4.9, "Bilbo → Leioa", "09:00", false, "LA", "GGH Saila"),
-                new Rider(4, "Josu Mendiz.", "1.5 km", 4.7, "Bilbo → Derio", "09:15", true, "JM", "Komunikazioa"),
-                new Rider(5, "Izaro Uriarte", "2.1 km", 4.5, "Bilbo → Sestao", "09:30", false, "IU", "IT Saila"),
-                new Rider(6, "Gorka Azkue", "2.4 km", 4.8, "Bilbo → Erandio", "07:45", true, "GA", "Legala"));
+    public List<Rider> getRiders(long userId) {
+        List<User> users = userCsvService.getAllUsers();
+
+        return csv.readRows(OFFERS_FILE).stream()
+                .filter(row -> Boolean.parseBoolean(row.getOrDefault("active", "false")))
+                .filter(row -> parseLong(row.get("userID")) != userId)
+                .map(row -> {
+                    User driver = users.stream()
+                            .filter(user -> user.userID() == parseLong(row.get("userID")))
+                            .findFirst()
+                            .orElse(null);
+
+                    if (driver == null) {
+                        return null;
+                    }
+
+                    String company = userCsvService.findCompany(driver.empresaID())
+                            .map(Empresa::nombre)
+                            .orElse("EcoMove");
+
+                    return new Rider(
+                            parseLong(row.get("offerID")),
+                            driver.nombre() + " " + driver.apellidos(),
+                            row.getOrDefault("distance", "0 km"),
+                            parseDouble(row.get("rating")),
+                            row.getOrDefault("origen", "") + " → " + row.getOrDefault("destino", ""),
+                            row.getOrDefault("time", ""),
+                            driver.modeloCocheID().toUpperCase().contains("TESLA") || driver.modeloCocheID().toUpperCase().contains("EV"),
+                            getInitials(driver.nombre() + " " + driver.apellidos()),
+                            company
+                    );
+                })
+                .filter(rider -> rider != null)
+                .toList();
     }
 
     public List<TransportLine> getTransportLines() {
-        return List.of(
-                new TransportLine("A3", "Bilbo – Getxo", "#16a34a", 3, "garaiz", 12),
-                new TransportLine("B1", "Bilbo – Basauri", "#0ea5e9", 7, "garaiz", 8),
-                new TransportLine("M1", "Metro Linia 1", "#7c3aed", 2, "garaiz", 24),
-                new TransportLine("M2", "Metro Linia 2", "#d97706", 5, "atzeratua", 18),
-                new TransportLine("T1", "Tranbaia", "#db2777", 4, "garaiz", 15),
-                new TransportLine("C2", "Bilbo – Leioa", "#0284c7", 6, "garaiz", 10));
+        return csv.readRows(LINES_FILE).stream().map(row -> new TransportLine(
+                row.getOrDefault("id", ""),
+                row.getOrDefault("name", ""),
+                row.getOrDefault("color", "#16a34a"),
+                parseInt(row.get("minutes")),
+                row.getOrDefault("status", "garaiz"),
+                parseInt(row.get("stops"))
+        )).toList();
     }
 
     public List<Reward> getRewards(String category) {
-        List<Reward> rewards = List.of(
-                new Reward(1, "Kafe bat doan", 150, "☕", "Janaria"),
-                new Reward(2, "%15 Bizikletetan", 200, "🚲", "Garraioa"),
-                new Reward(3, "Denda bertakoa", 300, "🛍️", "Erosketak"),
-                new Reward(4, "Bide Berde Bono", 500, "🌿", "Natura"),
-                new Reward(5, "Zinema sarrera", 400, "🎬", "Aisia"),
-                new Reward(6, "Yoga klasea", 250, "🧘", "Osasuna"),
-                new Reward(7, "Liburutegi bono", 180, "📚", "Aisia"),
-                new Reward(8, "Fruta saskia", 220, "🍎", "Janaria"));
+        List<Reward> rewards = csv.readRows(REWARDS_FILE).stream().map(row -> new Reward(
+                parseLong(row.get("rewardID")),
+                row.getOrDefault("title", ""),
+                parseInt(row.get("points")),
+                row.getOrDefault("emoji", "🎁"),
+                row.getOrDefault("category", "")
+        )).toList();
 
         if (category == null || category.isBlank() || category.equalsIgnoreCase("Guztiak")) {
             return rewards;
@@ -203,43 +266,315 @@ public class EcoMoveService {
         return new TrackingStatus(true, selectedMode, "0.0 km", "00:00", "0 kg", 0);
     }
 
-    public TrackingStatus stopTracking() {
-        return new TrackingStatus(false, "Autobusa", "18.2 km", "38 min", "2.8 kg", 12);
+    public TrackingStatus stopTracking(long userId, String mode) {
+        String selectedMode = mode == null || mode.isBlank() ? "Autobusa" : mode;
+        double km = switch (selectedMode) {
+            case "Oinez" -> 2.4;
+            case "Bizikleta" -> 4.8;
+            case "Karpoola" -> 14.2;
+            default -> 12.5;
+        };
+        double co2 = selectedMode.equalsIgnoreCase("Autoa") ? 0.0 : roundOne(km * 0.15);
+        int points = switch (selectedMode) {
+            case "Oinez" -> 8;
+            case "Bizikleta" -> 12;
+            case "Karpoola" -> 15;
+            default -> 10;
+        };
+
+        long tripId = csv.nextId(TRIPS_FILE, "tripID");
+        String icon = iconForMode(selectedMode);
+        csv.appendRow(TRIPS_FILE, TRIP_HEADERS, List.of(
+                String.valueOf(tripId),
+                String.valueOf(userId),
+                LocalDate.now().toString(),
+                getUser(userId).puebloCiudad(),
+                "EcoMove helmuga",
+                formatOne(km),
+                formatOne(co2),
+                selectedMode,
+                "30",
+                String.valueOf(points),
+                icon
+        ));
+
+        return new TrackingStatus(false, selectedMode, formatOne(km) + " km", "30 min", formatOne(co2) + " kg", points);
     }
 
-    public CorporateDashboard getCorporateDashboard() {
-        return new CorporateDashboard(
-                List.of(
-                        new CorporateKpi("CO₂ Aurreztua", "2.4 t", "+18%", "🌳", "green"),
-                        new CorporateKpi("Ibilaldi Aktiboak", "1.247", "+32%", "👥", "blue"),
-                        new CorporateKpi("Auto Erabilera", "34%", "−12%", "🚗", "yellow"),
-                        new CorporateKpi("Puntuak Irabazi", "48.2k", "+24%", "⭐", "purple")),
-                List.of(
-                        new CorporateMonthlyStat("Urt", 380, 45),
-                        new CorporateMonthlyStat("Ots", 310, 52),
-                        new CorporateMonthlyStat("Mar", 420, 61),
-                        new CorporateMonthlyStat("Api", 280, 78),
-                        new CorporateMonthlyStat("Mai", 210, 92),
-                        new CorporateMonthlyStat("Eka", 156, 108)),
-                List.of(
-                        new Employee(1, "Amaia Larrea", "AL", "IT Saila", 58, "124 kg", 2840),
-                        new Employee(2, "Mikel Garmendia", "MG", "Finantza", 45, "98 kg", 2210),
-                        new Employee(3, "Nerea Beitia", "NB", "GGH Saila", 41, "87 kg", 1980),
-                        new Employee(4, "Aitor Zubikarai", "AZ", "IT Saila", 38, "81 kg", 1740),
-                        new Employee(5, "Maite Altuna", "MA", "Komunikazioa", 33, "72 kg", 1520)),
-                List.of(
-                        new DepartmentParticipation("IT Saila", 78, 34),
-                        new DepartmentParticipation("GGH Saila", 62, 27),
-                        new DepartmentParticipation("Finantza", 54, 23),
-                        new DepartmentParticipation("Komunikazioa", 45, 19),
-                        new DepartmentParticipation("Legala", 38, 16)));
+    public void offerTrip(long userId, CarpoolOfferRequest request) {
+        csv.appendRow(OFFERS_FILE, OFFER_HEADERS, List.of(
+                String.valueOf(csv.nextId(OFFERS_FILE, "offerID")),
+                String.valueOf(userId),
+                safe(request.from(), ""),
+                safe(request.to(), ""),
+                safe(request.time(), "08:30"),
+                String.valueOf(request.seats() <= 0 ? 1 : request.seats()),
+                "true",
+                "0.5 km",
+                "4.7"
+        ));
+    }
+
+    public void joinRide(long userId, String riderName) {
+        csv.appendRow(JOINS_FILE, JOIN_HEADERS, List.of(
+                String.valueOf(csv.nextId(JOINS_FILE, "joinID")),
+                String.valueOf(userId),
+                safe(riderName, ""),
+                LocalDate.now().toString()
+        ));
+    }
+
+    public boolean redeemReward(long userId, long rewardId) {
+        Optional<Reward> reward = getRewards(null).stream().filter(item -> item.id() == rewardId).findFirst();
+        if (reward.isEmpty()) {
+            return false;
+        }
+
+        int availablePoints = userTripRows(userId).stream().mapToInt(row -> parseInt(row.get("puntos"))).sum() - redeemedPoints(userId);
+        if (availablePoints < reward.get().points()) {
+            return false;
+        }
+
+        csv.appendRow(REDEMPTIONS_FILE, REDEMPTION_HEADERS, List.of(
+                String.valueOf(csv.nextId(REDEMPTIONS_FILE, "redencionID")),
+                String.valueOf(userId),
+                String.valueOf(rewardId),
+                LocalDate.now().toString(),
+                String.valueOf(reward.get().points())
+        ));
+        return true;
+    }
+
+    public CorporateDashboard getCorporateDashboard(long userId) {
+        User currentUser = getUser(userId);
+        long empresaID = currentUser.empresaID();
+        List<User> companyUsers = userCsvService.getAllUsers().stream()
+                .filter(user -> user.empresaID() == empresaID)
+                .toList();
+        List<Long> userIds = companyUsers.stream().map(User::userID).toList();
+        List<Map<String, String>> companyTrips = csv.readRows(TRIPS_FILE).stream()
+                .filter(row -> userIds.contains(parseLong(row.get("userID"))))
+                .toList();
+
+        double co2 = companyTrips.stream().mapToDouble(row -> parseDouble(row.get("co2"))).sum();
+        int points = companyTrips.stream().mapToInt(row -> parseInt(row.get("puntos"))).sum();
+        long autoTrips = companyTrips.stream().filter(row -> row.getOrDefault("modo", "").equalsIgnoreCase("Autoa")).count();
+        int autoPercent = companyTrips.isEmpty() ? 0 : (int) Math.round(autoTrips * 100.0 / companyTrips.size());
+
+        List<CorporateKpi> kpis = List.of(
+                new CorporateKpi("CO₂ Aurreztua", formatKg(co2), "CSV bidez", "🌳", "green"),
+                new CorporateKpi("Ibilaldi Aktiboak", String.valueOf(companyTrips.size()), "Enpresako bidaiak", "👥", "blue"),
+                new CorporateKpi("Auto Erabilera", autoPercent + "%", "Autoa moduko bidaiak", "🚗", "yellow"),
+                new CorporateKpi("Puntuak Irabazi", formatNumber(points), "Langileen guztira", "⭐", "purple")
+        );
+
+        Map<String, double[]> monthly = new LinkedHashMap<>();
+        for (Map<String, String> row : companyTrips) {
+            String month = monthName(row.get("fecha"));
+            double[] values = monthly.computeIfAbsent(month, key -> new double[]{0.0, 0.0});
+            values[0] += parseDouble(row.get("co2"));
+            values[1] += 1;
+        }
+
+        List<CorporateMonthlyStat> monthlyStats = monthly.entrySet().stream()
+                .map(entry -> new CorporateMonthlyStat(entry.getKey(), (int) Math.round(entry.getValue()[0]), (int) Math.round(entry.getValue()[1])))
+                .toList();
+
+        List<Employee> topEmployees = companyUsers.stream()
+                .map(user -> {
+                    List<Map<String, String>> trips = userTripRows(user.userID());
+                    int tripCount = trips.size();
+                    int userPoints = trips.stream().mapToInt(row -> parseInt(row.get("puntos"))).sum();
+                    double userCo2 = trips.stream().mapToDouble(row -> parseDouble(row.get("co2"))).sum();
+                    return new Employee(0, user.nombre() + " " + user.apellidos(), getInitials(user.nombre() + " " + user.apellidos()), user.puebloCiudad(), tripCount, formatKg(userCo2), userPoints);
+                })
+                .sorted(Comparator.comparingInt(Employee::points).reversed())
+                .toList();
+
+        List<Employee> ranked = new ArrayList<>();
+        for (int i = 0; i < topEmployees.size(); i++) {
+            Employee e = topEmployees.get(i);
+            ranked.add(new Employee(i + 1, e.name(), e.initials(), e.department(), e.trips(), e.co2Saved(), e.points()));
+        }
+
+        Map<String, Long> byCity = companyUsers.stream().collect(Collectors.groupingBy(User::puebloCiudad, LinkedHashMap::new, Collectors.counting()));
+        List<DepartmentParticipation> departments = byCity.entrySet().stream()
+                .map(entry -> new DepartmentParticipation(entry.getKey(), (int) Math.round(entry.getValue() * 100.0 / companyUsers.size()), entry.getValue().intValue()))
+                .toList();
+
+        return new CorporateDashboard(kpis, monthlyStats, ranked, departments);
+    }
+
+    public List<Empresa> getCompanies() {
+        return userCsvService.getCompanies();
+    }
+
+    public List<CarModel> getCarModels() {
+        return userCsvService.getCarModels();
+    }
+
+    public String exportCsv(String filename) {
+        return csv.readRaw(filename);
+    }
+
+    public String dataDirectory() {
+        return csv.getDataDir().toString();
+    }
+
+    private UserProfile buildProfile(User user) {
+        String organization = userCsvService.findCompany(user.empresaID()).map(Empresa::nombre).orElse("EcoMove");
+        List<Map<String, String>> trips = userTripRows(user.userID());
+        int totalPoints = trips.stream().mapToInt(row -> parseInt(row.get("puntos"))).sum() - redeemedPoints(user.userID());
+        double co2 = trips.stream().mapToDouble(row -> parseDouble(row.get("co2"))).sum();
+        int level = Math.max(1, 1 + totalPoints / 250);
+
+        return new UserProfile(
+                user.userID(),
+                user.nombre() + " " + user.apellidos(),
+                getInitials(user.nombre() + " " + user.apellidos()),
+                user.email(),
+                organization,
+                user.puebloCiudad(),
+                level,
+                totalPoints,
+                trips.size(),
+                formatKg(co2),
+                badgeForPoints(totalPoints),
+                user.empresaID(),
+                user.nombreUsuario(),
+                user.tieneCoche(),
+                user.modeloCocheID(),
+                user.puebloCiudad()
+        );
+    }
+
+    private User getUser(long userId) {
+        return userCsvService.findById(userId)
+                .orElseGet(() -> userCsvService.getAllUsers().stream().findFirst()
+                        .orElseThrow(() -> new IllegalStateException("No hay usuarios en data/usuarios.csv")));
+    }
+
+    private List<Map<String, String>> userTripRows(long userId) {
+        return csv.readRows(TRIPS_FILE).stream()
+                .filter(row -> parseLong(row.get("userID")) == userId)
+                .toList();
+    }
+
+    private Trip toTrip(Map<String, String> row) {
+        return new Trip(
+                parseLong(row.get("tripID")),
+                row.getOrDefault("origen", ""),
+                row.getOrDefault("destino", ""),
+                formatOne(parseDouble(row.get("km"))) + " km",
+                formatOne(parseDouble(row.get("co2"))) + " kg",
+                row.getOrDefault("modo", ""),
+                row.getOrDefault("fecha", ""),
+                row.getOrDefault("icono", iconForMode(row.getOrDefault("modo", ""))),
+                "+" + parseInt(row.get("puntos")) + " pts"
+        );
+    }
+
+    private int redeemedPoints(long userId) {
+        return csv.readRows(REDEMPTIONS_FILE).stream()
+                .filter(row -> parseLong(row.get("userID")) == userId)
+                .mapToInt(row -> parseInt(row.get("puntos")))
+                .sum();
+    }
+
+    private String badgeForPoints(int points) {
+        if (points >= 1000) return "Ekologista Aurreratua";
+        if (points >= 500) return "Bidaiari Berdea";
+        if (points >= 100) return "Ekologista";
+        return "Hasiberria";
     }
 
     private String getInitials(String name) {
-        String[] parts = name.trim().split("\\s+");
+        String[] parts = name == null ? new String[0] : name.trim().split("\\s+");
+        if (parts.length == 0 || parts[0].isBlank()) {
+            return "EM";
+        }
         if (parts.length == 1) {
             return parts[0].substring(0, Math.min(2, parts[0].length())).toUpperCase();
         }
         return (parts[0].substring(0, 1) + parts[1].substring(0, 1)).toUpperCase();
+    }
+
+    private String iconForMode(String mode) {
+        return switch (mode == null ? "" : mode) {
+            case "Oinez" -> "🚶";
+            case "Bizikleta" -> "🚲";
+            case "Metroa" -> "🚇";
+            case "Tranbaia" -> "🚋";
+            case "Karpoola" -> "🚗";
+            case "Autoa" -> "🚘";
+            default -> "🚌";
+        };
+    }
+
+    private String monthName(String dateValue) {
+        try {
+            int month = LocalDate.parse(dateValue, DateTimeFormatter.ISO_LOCAL_DATE).getMonthValue();
+            return switch (month) {
+                case 1 -> "Urt";
+                case 2 -> "Ots";
+                case 3 -> "Mar";
+                case 4 -> "Api";
+                case 5 -> "Mai";
+                case 6 -> "Eka";
+                case 7 -> "Uzt";
+                case 8 -> "Abu";
+                case 9 -> "Ira";
+                case 10 -> "Urr";
+                case 11 -> "Aza";
+                case 12 -> "Abe";
+                default -> "?";
+            };
+        } catch (Exception e) {
+            return "?";
+        }
+    }
+
+    private String formatKg(double value) {
+        return formatOne(value) + " kg";
+    }
+
+    private String formatOne(double value) {
+        return String.format(java.util.Locale.US, "%.1f", value);
+    }
+
+    private String formatNumber(int value) {
+        return String.format(java.util.Locale.GERMANY, "%d", value);
+    }
+
+    private double roundOne(double value) {
+        return Math.round(value * 10.0) / 10.0;
+    }
+
+    private int parseInt(String value) {
+        try {
+            return Integer.parseInt(value == null || value.isBlank() ? "0" : value);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    private long parseLong(String value) {
+        try {
+            return Long.parseLong(value == null || value.isBlank() ? "0" : value);
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
+    }
+
+    private double parseDouble(String value) {
+        try {
+            return Double.parseDouble(value == null || value.isBlank() ? "0" : value);
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
+    }
+
+    private String safe(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
     }
 }

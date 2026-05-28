@@ -1,0 +1,4 @@
+offerID,userID,origen,destino,time,seats,active,distance,rating
+1,1,Bilbo,Getxo,08:15,2,true,0.3 km,4.8
+2,3,Basauri,Bilbo,08:30,1,true,0.7 km,4.6
+3,1,Bilbo,Derio,09:15,3,true,1.5 km,4.7

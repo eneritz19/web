@@ -3,13 +3,18 @@ C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehil
 C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\EcoMoveApplication.java
 C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\AuthRequest.java
 C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\AuthResponse.java
+C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\CarModel.java
+C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\CarpoolOfferRequest.java
 C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\CorporateDashboard.java
 C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\CorporateKpi.java
 C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\CorporateMonthlyStat.java
 C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\DashboardResponse.java
 C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\DepartmentParticipation.java
 C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\Employee.java
+C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\Empresa.java
+C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\LoginRequest.java
 C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\MonthlyStat.java
+C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\RegisterRequest.java
 C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\Reward.java
 C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\Rider.java
 C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\RouteRecommendation.java
@@ -21,5 +26,6 @@ C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehil
 C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\Trip.java
 C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\User.java
 C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\model\UserProfile.java
+C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\service\CsvDataService.java
 C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\service\EcoMoveService.java
 C:\Users\eneri\OneDrive - Mondragon Unibertsitatea\Escritorio\MU\3.maila\2.sehileko\PBL\webAplikazioa\web\src\main\java\com\ecomove\service\UserCsvService.java

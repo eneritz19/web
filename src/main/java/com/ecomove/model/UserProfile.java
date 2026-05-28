@@ -11,5 +11,10 @@ public record UserProfile(
         int points,
         int trips,
         String co2Saved,
-        String badge
+        String badge,
+        long empresaID,
+        String nombreUsuario,
+        boolean tieneCoche,
+        String modeloCocheID,
+        String puebloCiudad
 ) {}

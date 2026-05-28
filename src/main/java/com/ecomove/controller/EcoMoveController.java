@@ -3,9 +3,11 @@ package com.ecomove.controller;
 import com.ecomove.model.*;
 import com.ecomove.service.EcoMoveService;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -18,43 +20,53 @@ public class EcoMoveController {
     }
 
     @PostMapping("/auth/login")
-    public AuthResponse login(@Valid @RequestBody AuthRequest request) {
+    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return service.login(request);
     }
 
     @PostMapping("/auth/register")
-    public AuthResponse register(@Valid @RequestBody AuthRequest request) {
+    public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
         return service.register(request);
     }
 
+    @GetMapping("/catalog/companies")
+    public List<Empresa> companies() {
+        return service.getCompanies();
+    }
+
+    @GetMapping("/catalog/car-models")
+    public List<CarModel> carModels() {
+        return service.getCarModels();
+    }
+
     @GetMapping("/profile")
-    public UserProfile profile() {
-        return service.getCurrentUser();
+    public UserProfile profile(@RequestParam long userId) {
+        return service.getProfile(userId);
     }
 
     @GetMapping("/dashboard")
-    public DashboardResponse dashboard() {
-        return service.getDashboard();
+    public DashboardResponse dashboard(@RequestParam long userId) {
+        return service.getDashboard(userId);
     }
 
     @GetMapping("/stats")
-    public List<MonthlyStat> stats() {
-        return service.getMonthlyStats();
+    public List<MonthlyStat> stats(@RequestParam long userId) {
+        return service.getMonthlyStats(userId);
     }
 
     @GetMapping("/transport-share")
-    public List<TransportShare> transportShare() {
-        return service.getTransportShare();
+    public List<TransportShare> transportShare(@RequestParam long userId) {
+        return service.getTransportShare(userId);
     }
 
     @GetMapping("/trips")
-    public List<Trip> trips() {
-        return service.getRecentTrips();
+    public List<Trip> trips(@RequestParam long userId) {
+        return service.getRecentTrips(userId);
     }
 
     @GetMapping("/riders")
-    public List<Rider> riders() {
-        return service.getRiders();
+    public List<Rider> riders(@RequestParam long userId) {
+        return service.getRiders(userId);
     }
 
     @GetMapping("/transport-lines")
@@ -67,9 +79,15 @@ public class EcoMoveController {
         return service.getRewards(category);
     }
 
+    @PostMapping("/rewards/redeem")
+    public Map<String, Object> redeemReward(@RequestParam long userId, @RequestParam long rewardId) {
+        boolean ok = service.redeemReward(userId, rewardId);
+        return Map.of("ok", ok, "message", ok ? "Saria trukatuta" : "Ez dago puntu nahikorik edo saria ez da existitzen");
+    }
+
     @GetMapping("/route/recommended")
-    public RouteRecommendation recommendedRoute() {
-        return service.getRecommendedRoute();
+    public RouteRecommendation recommendedRoute(@RequestParam long userId) {
+        return service.getRecommendedRoute(userId);
     }
 
     @PostMapping("/tracking/start")
@@ -78,12 +96,44 @@ public class EcoMoveController {
     }
 
     @PostMapping("/tracking/stop")
-    public TrackingStatus stopTracking() {
-        return service.stopTracking();
+    public TrackingStatus stopTracking(@RequestParam long userId, @RequestParam(required = false) String mode) {
+        return service.stopTracking(userId, mode);
+    }
+
+    @PostMapping("/carpool/offers")
+    public Map<String, Object> offerTrip(@RequestParam long userId, @RequestBody CarpoolOfferRequest request) {
+        service.offerTrip(userId, request);
+        return Map.of("ok", true, "message", "Bidaia data/carpool_ofertas.csv fitxategian gorde da");
+    }
+
+    @PostMapping("/carpool/join")
+    public Map<String, Object> joinRide(@RequestParam long userId, @RequestParam String riderName) {
+        service.joinRide(userId, riderName);
+        return Map.of("ok", true, "message", "Bidaia elkartzea data/carpool_uniones.csv fitxategian gorde da");
     }
 
     @GetMapping("/corporate")
-    public CorporateDashboard corporate() {
-        return service.getCorporateDashboard();
+    public CorporateDashboard corporate(@RequestParam long userId) {
+        return service.getCorporateDashboard(userId);
+    }
+
+    @GetMapping("/csv/info")
+    public Map<String, String> csvInfo() {
+        return Map.of("dataDirectory", service.dataDirectory());
+    }
+
+    @GetMapping(value = "/csv/users", produces = "text/csv;charset=UTF-8")
+    public String usersCsv() {
+        return service.exportCsv("usuarios.csv");
+    }
+
+    @GetMapping(value = "/csv/trips", produces = "text/csv;charset=UTF-8")
+    public String tripsCsv() {
+        return service.exportCsv("viajes.csv");
+    }
+
+    @GetMapping(value = "/csv/rewards", produces = "text/csv;charset=UTF-8")
+    public String rewardsCsv() {
+        return service.exportCsv("recompensas.csv");
     }
 }

@@ -1,0 +1,6 @@
+modeloCocheID,marca,modelo,tipo,emisionesKgKm
+SIN_COCHE,Sin coche,Sin coche,Ninguno,0
+TESLA_MODEL_3,Tesla,Model 3,Electrico,0
+TOYOTA_COROLLA,Toyota,Corolla,Hibrido,0.09
+RENAULT_CLIO,Renault,Clio,Gasolina,0.12
+VW_GOLF,Volkswagen,Golf,Diesel,0.14

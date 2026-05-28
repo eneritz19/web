@@ -1,0 +1,20 @@
+tripID,userID,fecha,origen,destino,km,co2,modo,duracionMin,puntos,icono
+1,1,2026-01-12,Bilbo,Getxo,18.2,2.8,Metroa,38,14,🚇
+2,1,2026-02-04,Bilbo,Basauri,12.4,1.9,Autobusa,31,10,🚌
+3,1,2026-03-18,Leioa,Bilbo,15.8,1.2,Karpoola,26,15,🚗
+4,1,2026-04-22,Bilbo,Sestao,9.1,1.4,Tranbaia,24,8,🚋
+5,1,2026-05-24,Bilbo,Abando,3.2,0.4,Oinez,32,6,🚶
+6,2,2026-01-15,Getxo,Bilbo,18.1,2.7,Metroa,39,14,🚇
+7,2,2026-03-03,Getxo,Leioa,7.4,1.1,Bizikleta,28,12,🚲
+8,2,2026-04-10,Bilbo,Getxo,18.1,2.7,Metroa,40,14,🚇
+9,2,2026-05-20,Getxo,Bilbo,18.1,2.7,Autobusa,44,12,🚌
+10,3,2026-02-09,Basauri,Bilbo,8.8,1.2,Metroa,18,9,🚇
+11,3,2026-03-21,Bilbo,Derio,11.6,0.9,Karpoola,22,13,🚗
+12,3,2026-05-02,Basauri,Bilbo,8.8,0.0,Autoa,16,0,🚘
+13,4,2026-01-28,Leioa,Bilbo,13.6,2.0,Autobusa,34,11,🚌
+14,4,2026-02-19,Leioa,Getxo,6.5,0.9,Bizikleta,25,10,🚲
+15,4,2026-04-25,Bilbo,Leioa,13.6,2.0,Metroa,36,12,🚇
+16,5,2026-05-28,Bilbo,EcoMove helmuga,12.5,1.9,Autobusa,30,10,🚌
+17,5,2026-05-28,Bilbo,EcoMove helmuga,12.5,1.9,Autobusa,30,10,🚌
+18,5,2026-05-28,Bilbo,EcoMove helmuga,12.5,1.9,Autobusa,30,10,🚌
+19,5,2026-05-28,Bilbo,EcoMove helmuga,12.5,1.9,Autobusa,30,10,🚌

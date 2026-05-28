@@ -1,118 +1,105 @@
-# EcoMove Simple V2
+# EcoMove web simplificada con CSV
 
-Versión simplificada del prototipo EcoMove.
+Proyecto Spring Boot con frontend HTML/CSS/JavaScript y backend Java por capas (`controller`, `service`, `model`).
 
-La versión original estaba montada con React/Vite y muchas dependencias UI. Esta versión está pensada para que sea más fácil de entender, modificar y conectar con Matomo.
-
-## Estructura
-
-```text
-src/main/java/com/ecomove/
-├── EcoMoveApplication.java
-├── controller/
-│   ├── EcoMoveController.java
-│   └── WebController.java
-├── model/
-│   ├── UserProfile.java
-│   ├── Trip.java
-│   ├── Reward.java
-│   ├── Rider.java
-│   ├── TransportLine.java
-│   └── ...
-└── service/
-    └── EcoMoveService.java
-
-src/main/resources/static/
-├── index.html
-├── css/styles.css
-└── js/app.js
-```
-
-## Cómo ejecutarlo
-
-Desde la carpeta del proyecto:
+## Ejecutar
 
 ```powershell
 mvn spring-boot:run
 ```
 
-Luego abre:
+La aplicación está configurada en:
 
 ```text
-http://localhost:8080
+http://localhost:8082
 ```
 
-También puedes abrirlo desde IntelliJ o VS Code ejecutando la clase:
+Si quieres usar `8080`, cambia `server.port=8082` en `src/main/resources/application.properties`.
+
+## Usuarios de prueba
 
 ```text
-src/main/java/com/ecomove/EcoMoveApplication.java
+jonu / 123456
+anez / 123456
+mikele / 123456
+leirea / 123456
 ```
 
-## Pantallas incluidas
+Cada usuario tiene datos distintos porque el dashboard se calcula con su `userID`.
 
-- Bienvenida
-- Login
-- Registro
-- Hasiera / Dashboard
-- Bidaia trakeatua
-- Karpoola
-- Garraioa
-- Sariak
-- Estatistikak
-- Profila
-- Enpresa panel
+## CSV principales
 
-## Endpoints principales
+Los datos persistentes están en la carpeta raíz:
 
 ```text
-POST /api/auth/login
-POST /api/auth/register
-GET  /api/profile
-GET  /api/dashboard
-GET  /api/trips
-GET  /api/riders
-GET  /api/transport-lines
-GET  /api/rewards
-GET  /api/rewards?category=Janaria
-GET  /api/route/recommended
-POST /api/tracking/start?mode=Autobusa
-POST /api/tracking/stop
-GET  /api/corporate
+data/
+├── usuarios.csv
+├── empresas.csv
+├── coches.csv
+├── viajes.csv
+├── recompensas.csv
+├── canjeos.csv
+├── lineas_transporte.csv
+├── rutas_recomendadas.csv
+├── ruta_pasos.csv
+├── carpool_ofertas.csv
+└── carpool_uniones.csv
+```
+
+## Campos del CSV de usuarios
+
+```csv
+userID,empresaID,nombre,apellidos,nombreUsuario,contrasena,email,tieneCoche,modeloCocheID,puebloCiudad
+```
+
+Al crear un usuario nuevo, se guarda una fila nueva en `data/usuarios.csv`.
+
+## Datos que se guardan
+
+- Registro de usuario: `data/usuarios.csv`
+- Viaje finalizado desde la pantalla Bidaia: `data/viajes.csv`
+- Oferta de karpoola: `data/carpool_ofertas.csv`
+- Unión a un viaje de karpoola: `data/carpool_uniones.csv`
+- Canjeo de recompensas: `data/canjeos.csv`
+
+## Endpoints CSV para pasar datos a otro servicio
+
+```text
+GET /api/csv/users
+GET /api/csv/trips
+GET /api/csv/rewards
+GET /api/csv/info
+```
+
+Ejemplo:
+
+```text
+http://localhost:8082/api/csv/users
 ```
 
 ## Matomo
 
-El punto para añadir Matomo está en:
+El script de Matomo está preparado en:
 
 ```text
 src/main/resources/static/index.html
 ```
 
-Busca el bloque comentado `MATOMO` y sustituye:
+Y los eventos se lanzan desde:
 
-```javascript
-var u = "MATOMO_URL";
-_paq.push(['setSiteId', 'SITE_ID']);
+```text
+src/main/resources/static/js/app.js
 ```
 
-por tus datos reales de Matomo.
-
-Además, en `app.js` ya hay funciones para registrar eventos:
+Ejemplos de eventos:
 
 ```javascript
-matomoPage('Nombre de página');
-matomoEvent('Categoría', 'acción', 'nombre');
+matomoEvent('Auth', 'login', nombreUsuario);
+matomoEvent('Tracking', 'stop', mode);
+matomoEvent('Rewards', 'redeem', title);
+matomoEvent('Carpool', 'offer', 'publish');
 ```
 
-Ejemplos incluidos:
+## Nota para Google Cloud Run
 
-- Login
-- Registro
-- Inicio/fin de viaje
-- Filtro de recompensas
-- Exportar estadísticas
-- Clicks en karpoola
-
-## Nota
-
-Los datos están simulados dentro de `EcoMoveService.java`. Más adelante puedes sustituirlos por una base de datos, por ejemplo con JPA/Hibernate y un repositorio.
+Para una demo local o entrega, CSV local está bien. En Cloud Run, los archivos locales del contenedor no son persistentes si el servicio se reinicia. Para producción, lo correcto sería guardar estos CSV en Cloud Storage o usar una base de datos.

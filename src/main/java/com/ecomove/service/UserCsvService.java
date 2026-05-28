@@ -1,87 +1,129 @@
 package com.ecomove.service;
 
+import com.ecomove.model.CarModel;
+import com.ecomove.model.Empresa;
 import com.ecomove.model.User;
 import org.springframework.stereotype.Service;
 
-import java.io.*;
-import java.nio.file.*;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
 public class UserCsvService {
 
-    private static final String FILE_PATH = "src/main/resources/data/users.csv";
+    public static final String USERS_FILE = "usuarios.csv";
+    public static final String COMPANIES_FILE = "empresas.csv";
+    public static final String CARS_FILE = "coches.csv";
 
-    public List<User> getAllUsers() {
-        List<User> users = new ArrayList<>();
+    private static final List<String> USER_HEADERS = List.of(
+            "userID", "empresaID", "nombre", "apellidos", "nombreUsuario", "contrasena",
+            "email", "tieneCoche", "modeloCocheID", "puebloCiudad"
+    );
 
-        try (BufferedReader br = Files.newBufferedReader(Paths.get(FILE_PATH))) {
+    private final CsvDataService csv;
 
-            String line;
-            boolean firstLine = true;
-
-            while ((line = br.readLine()) != null) {
-
-                if (firstLine) {
-                    firstLine = false;
-                    continue;
-                }
-
-                String[] data = line.split(",");
-
-                User user = new User(
-                        Long.parseLong(data[0]),
-                        Long.parseLong(data[1]),
-                        data[2],
-                        data[3],
-                        data[4],
-                        data[5],
-                        data[6],
-                        data[7]
-                );
-
-                users.add(user);
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return users;
+    public UserCsvService(CsvDataService csv) {
+        this.csv = csv;
     }
 
-    public void saveUser(User user) {
+    public List<User> getAllUsers() {
+        return csv.readRows(USERS_FILE).stream().map(this::toUser).toList();
+    }
 
-        try (BufferedWriter bw = Files.newBufferedWriter(
-                Paths.get(FILE_PATH),
-                StandardOpenOption.APPEND
-        )) {
+    public Optional<User> findById(long userId) {
+        return getAllUsers().stream().filter(user -> user.userID() == userId).findFirst();
+    }
 
-            bw.newLine();
-
-            bw.write(
-                    user.usuarioID() + "," +
-                    user.empresaID() + "," +
-                    user.nombre() + "," +
-                    user.apellido() + "," +
-                    user.email() + "," +
-                    user.password() + "," +
-                    user.modelococheID() + "," +
-                    user.publiCiudad()
-            );
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    public Optional<User> findByNombreUsuario(String nombreUsuario) {
+        return getAllUsers().stream()
+                .filter(user -> user.nombreUsuario().equalsIgnoreCase(nombreUsuario == null ? "" : nombreUsuario.trim()))
+                .findFirst();
     }
 
     public Optional<User> findByEmail(String email) {
-
-        return getAllUsers()
-                .stream()
-                .filter(user -> user.email().equalsIgnoreCase(email))
+        return getAllUsers().stream()
+                .filter(user -> user.email().equalsIgnoreCase(email == null ? "" : email.trim()))
                 .findFirst();
+    }
+
+    public User saveUser(User user) {
+        csv.appendRow(USERS_FILE, USER_HEADERS, List.of(
+                String.valueOf(user.userID()),
+                String.valueOf(user.empresaID()),
+                user.nombre(),
+                user.apellidos(),
+                user.nombreUsuario(),
+                user.contrasena(),
+                user.email(),
+                String.valueOf(user.tieneCoche()),
+                user.modeloCocheID(),
+                user.puebloCiudad()
+        ));
+        return user;
+    }
+
+    public long nextUserId() {
+        return csv.nextId(USERS_FILE, "userID");
+    }
+
+    public List<Empresa> getCompanies() {
+        return csv.readRows(COMPANIES_FILE).stream().map(row -> new Empresa(
+                parseLong(row.get("empresaID")),
+                row.getOrDefault("nombre", ""),
+                row.getOrDefault("ciudad", ""),
+                row.getOrDefault("descripcion", "")
+        )).toList();
+    }
+
+    public Optional<Empresa> findCompany(long empresaID) {
+        return getCompanies().stream().filter(company -> company.empresaID() == empresaID).findFirst();
+    }
+
+    public List<CarModel> getCarModels() {
+        return csv.readRows(CARS_FILE).stream().map(row -> new CarModel(
+                row.getOrDefault("modeloCocheID", ""),
+                row.getOrDefault("marca", ""),
+                row.getOrDefault("modelo", ""),
+                row.getOrDefault("tipo", ""),
+                parseDouble(row.get("emisionesKgKm"))
+        )).toList();
+    }
+
+    public Optional<CarModel> findCarModel(String modeloCocheID) {
+        return getCarModels().stream()
+                .filter(car -> car.modeloCocheID().equalsIgnoreCase(modeloCocheID == null ? "" : modeloCocheID))
+                .findFirst();
+    }
+
+    private User toUser(Map<String, String> row) {
+        return new User(
+                parseLong(row.get("userID")),
+                parseLong(row.get("empresaID")),
+                row.getOrDefault("nombre", ""),
+                row.getOrDefault("apellidos", ""),
+                row.getOrDefault("nombreUsuario", ""),
+                row.getOrDefault("contrasena", ""),
+                row.getOrDefault("email", ""),
+                Boolean.parseBoolean(row.getOrDefault("tieneCoche", "false")),
+                row.getOrDefault("modeloCocheID", "SIN_COCHE"),
+                row.getOrDefault("puebloCiudad", "")
+        );
+    }
+
+    private long parseLong(String value) {
+        try {
+            return Long.parseLong(value == null || value.isBlank() ? "0" : value);
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
+    }
+
+    private double parseDouble(String value) {
+        try {
+            return Double.parseDouble(value == null || value.isBlank() ? "0" : value);
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
     }
 }
