@@ -7,6 +7,11 @@ import java.util.List;
 
 @Service
 public class EcoMoveService {
+    private final UserCsvService userCsvService;
+
+    public EcoMoveService(UserCsvService userCsvService) {
+        this.userCsvService = userCsvService;
+    }
 
     private final UserProfile currentUser = new UserProfile(
             1L,
@@ -19,23 +24,71 @@ public class EcoMoveService {
             1240,
             47,
             "847 kg",
-            "Ekologista Aurreratua"
-    );
+            "Ekologista Aurreratua");
 
     public UserProfile getCurrentUser() {
         return currentUser;
     }
 
     public AuthResponse login(AuthRequest request) {
-        return new AuthResponse(true, "Login correcto. Datos simulados para el prototipo.", currentUser);
+
+        var userOptional = userCsvService.findByEmail(request.email());
+
+        if (userOptional.isEmpty()) {
+            return new AuthResponse(false, "Usuario no encontrado", null);
+        }
+
+        User user = userOptional.get();
+
+        if (!user.password().equals(request.password())) {
+            return new AuthResponse(false, "Contraseña incorrecta", null);
+        }
+
+        UserProfile profile = new UserProfile(
+                user.usuarioID(),
+                user.nombre() + " " + user.apellido(),
+                getInitials(user.nombre() + " " + user.apellido()),
+                user.email(),
+                "EcoMove",
+                "Erabiltzailea",
+                1,
+                0,
+                0,
+                "0 kg",
+                "Hasiberria");
+
+        return new AuthResponse(true, "Login correcto", profile);
     }
 
     public AuthResponse register(AuthRequest request) {
-        String name = request.name() == null || request.name().isBlank() ? "Erabiltzaile berria" : request.name();
-        UserProfile newUser = new UserProfile(
-                2L,
-                name,
-                getInitials(name),
+
+        if (userCsvService.findByEmail(request.email()).isPresent()) {
+            return new AuthResponse(false, "El usuario ya existe", null);
+        }
+
+        String[] parts = request.name().split(" ");
+
+        String nombre = parts[0];
+        String apellido = parts.length > 1 ? parts[1] : "";
+
+        long newId = userCsvService.getAllUsers().size() + 1;
+
+        User user = new User(
+                newId,
+                101,
+                nombre,
+                apellido,
+                request.email(),
+                request.password(),
+                "Sin coche",
+                "Bilbo");
+
+        userCsvService.saveUser(user);
+
+        UserProfile profile = new UserProfile(
+                newId,
+                request.name(),
+                getInitials(request.name()),
                 request.email(),
                 "EcoMove",
                 "Erabiltzailea",
@@ -43,9 +96,9 @@ public class EcoMoveService {
                 0,
                 0,
                 "0 kg",
-                "Hasiberria"
-        );
-        return new AuthResponse(true, "Registro correcto. Datos simulados para el prototipo.", newUser);
+                "Hasiberria");
+
+        return new AuthResponse(true, "Usuario registrado correctamente", profile);
     }
 
     public DashboardResponse getDashboard() {
@@ -55,8 +108,7 @@ public class EcoMoveService {
                 getMonthlyStats(),
                 getTransportShare(),
                 getRecentTrips(),
-                getRecommendedRoute()
-        );
+                getRecommendedRoute());
     }
 
     public List<StatCard> getStats() {
@@ -64,8 +116,7 @@ public class EcoMoveService {
                 new StatCard("CO₂ Aurreztua", "847 kg", "Aurten · %23↓ iaz baino", "🌳", "green"),
                 new StatCard("Bidaiak", "47", "Azken 30 egunetan", "🧭", "blue"),
                 new StatCard("Nire Puntuak", "1.240", "+180 aste honetan", "⭐", "yellow"),
-                new StatCard("Km garbi", "312 km", "Autorik gabe", "🚆", "purple")
-        );
+                new StatCard("Km garbi", "312 km", "Autorik gabe", "🚆", "purple"));
     }
 
     public List<MonthlyStat> getMonthlyStats() {
@@ -75,8 +126,7 @@ public class EcoMoveService {
                 new MonthlyStat("Mar", 16.8, 58),
                 new MonthlyStat("Api", 11.2, 42),
                 new MonthlyStat("Mai", 8.7, 35),
-                new MonthlyStat("Eka", 6.1, 28)
-        );
+                new MonthlyStat("Eka", 6.1, 28));
     }
 
     public List<TransportShare> getTransportShare() {
@@ -84,8 +134,7 @@ public class EcoMoveService {
                 new TransportShare("Oinez", 32),
                 new TransportShare("Bizikleta", 24),
                 new TransportShare("Autobusa", 30),
-                new TransportShare("Autoa", 14)
-        );
+                new TransportShare("Autoa", 14));
     }
 
     public List<Trip> getRecentTrips() {
@@ -93,8 +142,7 @@ public class EcoMoveService {
                 new Trip(1, "Bilbo", "Getxo", "18.2 km", "0 kg", "Autobusa", "Gaur, 08:32", "🚌", "+12 pts"),
                 new Trip(2, "Bilbo", "Basauri", "12.4 km", "0 kg", "Metroa", "Atzo, 17:45", "🚇", "+8 pts"),
                 new Trip(3, "Leioa", "Bilbo", "15.8 km", "0.3 kg", "Karpoola", "Atz.-herenegun", "🚗", "+15 pts"),
-                new Trip(4, "Bilbo", "Sestao", "9.1 km", "0 kg", "Tranbaia", "Dema.", "🚋", "+6 pts")
-        );
+                new Trip(4, "Bilbo", "Sestao", "9.1 km", "0 kg", "Tranbaia", "Dema.", "🚋", "+6 pts"));
     }
 
     public RouteRecommendation getRecommendedRoute() {
@@ -107,9 +155,7 @@ public class EcoMoveService {
                 List.of(
                         new RouteStep("🚶", "Oinez", "5 min"),
                         new RouteStep("🚇", "Metro M1", "20 min"),
-                        new RouteStep("🚌", "Autobusa A3", "13 min")
-                )
-        );
+                        new RouteStep("🚌", "Autobusa A3", "13 min")));
     }
 
     public List<Rider> getRiders() {
@@ -119,8 +165,7 @@ public class EcoMoveService {
                 new Rider(3, "Leire Aguirre", "1.2 km", 4.9, "Bilbo → Leioa", "09:00", false, "LA", "GGH Saila"),
                 new Rider(4, "Josu Mendiz.", "1.5 km", 4.7, "Bilbo → Derio", "09:15", true, "JM", "Komunikazioa"),
                 new Rider(5, "Izaro Uriarte", "2.1 km", 4.5, "Bilbo → Sestao", "09:30", false, "IU", "IT Saila"),
-                new Rider(6, "Gorka Azkue", "2.4 km", 4.8, "Bilbo → Erandio", "07:45", true, "GA", "Legala")
-        );
+                new Rider(6, "Gorka Azkue", "2.4 km", 4.8, "Bilbo → Erandio", "07:45", true, "GA", "Legala"));
     }
 
     public List<TransportLine> getTransportLines() {
@@ -130,8 +175,7 @@ public class EcoMoveService {
                 new TransportLine("M1", "Metro Linia 1", "#7c3aed", 2, "garaiz", 24),
                 new TransportLine("M2", "Metro Linia 2", "#d97706", 5, "atzeratua", 18),
                 new TransportLine("T1", "Tranbaia", "#db2777", 4, "garaiz", 15),
-                new TransportLine("C2", "Bilbo – Leioa", "#0284c7", 6, "garaiz", 10)
-        );
+                new TransportLine("C2", "Bilbo – Leioa", "#0284c7", 6, "garaiz", 10));
     }
 
     public List<Reward> getRewards(String category) {
@@ -143,8 +187,7 @@ public class EcoMoveService {
                 new Reward(5, "Zinema sarrera", 400, "🎬", "Aisia"),
                 new Reward(6, "Yoga klasea", 250, "🧘", "Osasuna"),
                 new Reward(7, "Liburutegi bono", 180, "📚", "Aisia"),
-                new Reward(8, "Fruta saskia", 220, "🍎", "Janaria")
-        );
+                new Reward(8, "Fruta saskia", 220, "🍎", "Janaria"));
 
         if (category == null || category.isBlank() || category.equalsIgnoreCase("Guztiak")) {
             return rewards;
@@ -170,31 +213,26 @@ public class EcoMoveService {
                         new CorporateKpi("CO₂ Aurreztua", "2.4 t", "+18%", "🌳", "green"),
                         new CorporateKpi("Ibilaldi Aktiboak", "1.247", "+32%", "👥", "blue"),
                         new CorporateKpi("Auto Erabilera", "34%", "−12%", "🚗", "yellow"),
-                        new CorporateKpi("Puntuak Irabazi", "48.2k", "+24%", "⭐", "purple")
-                ),
+                        new CorporateKpi("Puntuak Irabazi", "48.2k", "+24%", "⭐", "purple")),
                 List.of(
                         new CorporateMonthlyStat("Urt", 380, 45),
                         new CorporateMonthlyStat("Ots", 310, 52),
                         new CorporateMonthlyStat("Mar", 420, 61),
                         new CorporateMonthlyStat("Api", 280, 78),
                         new CorporateMonthlyStat("Mai", 210, 92),
-                        new CorporateMonthlyStat("Eka", 156, 108)
-                ),
+                        new CorporateMonthlyStat("Eka", 156, 108)),
                 List.of(
                         new Employee(1, "Amaia Larrea", "AL", "IT Saila", 58, "124 kg", 2840),
                         new Employee(2, "Mikel Garmendia", "MG", "Finantza", 45, "98 kg", 2210),
                         new Employee(3, "Nerea Beitia", "NB", "GGH Saila", 41, "87 kg", 1980),
                         new Employee(4, "Aitor Zubikarai", "AZ", "IT Saila", 38, "81 kg", 1740),
-                        new Employee(5, "Maite Altuna", "MA", "Komunikazioa", 33, "72 kg", 1520)
-                ),
+                        new Employee(5, "Maite Altuna", "MA", "Komunikazioa", 33, "72 kg", 1520)),
                 List.of(
                         new DepartmentParticipation("IT Saila", 78, 34),
                         new DepartmentParticipation("GGH Saila", 62, 27),
                         new DepartmentParticipation("Finantza", 54, 23),
                         new DepartmentParticipation("Komunikazioa", 45, 19),
-                        new DepartmentParticipation("Legala", 38, 16)
-                )
-        );
+                        new DepartmentParticipation("Legala", 38, 16)));
     }
 
     private String getInitials(String name) {

@@ -41,7 +41,14 @@ async function api(path, options = {}) {
     });
 
     if (!response.ok) {
-        throw new Error(`API error ${response.status}`);
+        let errorMessage = `API error ${response.status}`;
+
+        try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+        } catch { }
+
+        throw new Error(errorMessage);
     }
 
     return response.json();
@@ -219,31 +226,65 @@ function renderRegister() {
 
 async function login(event) {
     event.preventDefault();
+
     const form = new FormData(event.target);
+
     const data = {
         email: form.get('email'),
         password: form.get('password')
     };
-    const response = await api('/api/auth/login', { method: 'POST', body: JSON.stringify(data) });
-    state.user = response.user;
-    matomoEvent('Auth', 'login', data.email);
-    showToast(response.message);
-    go('#/app');
+
+    try {
+        const response = await api('/api/auth/login', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+
+        state.user = response.user;
+
+        matomoEvent('Auth', 'login', data.email);
+
+        showToast(response.message || 'Login correcto');
+
+        go('#/app');
+
+    } catch (error) {
+        console.error('Login error:', error);
+
+        showToast('Email o contraseña incorrectos');
+    }
 }
 
 async function register(event) {
     event.preventDefault();
+
     const form = new FormData(event.target);
+
     const data = {
         name: form.get('name'),
         email: form.get('email'),
         password: form.get('password')
     };
-    const response = await api('/api/auth/register', { method: 'POST', body: JSON.stringify(data) });
-    state.user = response.user;
-    matomoEvent('Auth', 'register', data.email);
-    showToast(response.message);
-    go('#/app');
+
+    try {
+        const response = await api('/api/auth/register', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+
+        state.user = response.user;
+
+        matomoEvent('Auth', 'register', data.email);
+
+        showToast(response.message || 'Cuenta creada');
+
+        go('#/app');
+
+    } catch (error) {
+        console.error('Register error:', error);
+
+        showToast('No se pudo crear la cuenta');
+    }
 }
 
 function shell(pageKey, content) {
@@ -333,15 +374,15 @@ function renderChart(data, field, label) {
     return `
         <div class="chart-bars">
             ${data.map(item => {
-                const height = Math.max(12, (Number(item[field]) / max) * 190);
-                return `
+        const height = Math.max(12, (Number(item[field]) / max) * 190);
+        return `
                     <div class="bar-wrap">
                         <strong>${item[field]}</strong>
                         <div class="bar" style="--h:${height}px"></div>
                         <small>${escapeHtml(item.month)}</small>
                     </div>
                 `;
-            }).join('')}
+    }).join('')}
         </div>
         <p style="color:#6b7280;font-weight:700;margin:12px 0 0">${label}</p>
     `;
@@ -693,18 +734,18 @@ function renderProfile() {
             </article>
             <div style="grid-column:span 2;display:grid;gap:18px">
                 ${settingsGroup('Kontua', [
-                    ['👤', 'Nire datu pertsonalak', 'Izena, helbidea, telefonoa'],
-                    ['🏢', `Erakundea: ${u.organization}`, u.department],
-                    ['🔔', 'Jakinarazpenak', 'Push eta email alertak']
-                ])}
+        ['👤', 'Nire datu pertsonalak', 'Izena, helbidea, telefonoa'],
+        ['🏢', `Erakundea: ${u.organization}`, u.department],
+        ['🔔', 'Jakinarazpenak', 'Push eta email alertak']
+    ])}
                 ${settingsGroup('Pribatutasuna eta Segurtasuna', [
-                    ['📍', 'Kokapena eta GPS', 'Bidai trakeatua'],
-                    ['🛡️', 'Datuen partekatzea', 'Enpresarekin eta hirugarrenekin']
-                ])}
+        ['📍', 'Kokapena eta GPS', 'Bidai trakeatua'],
+        ['🛡️', 'Datuen partekatzea', 'Enpresarekin eta hirugarrenekin']
+    ])}
                 ${settingsGroup('Aplikazioa', [
-                    ['🌍', 'Hizkuntza: Euskara', 'Euskara · Castellano · English'],
-                    ['📈', 'Panel korporatiboa', 'Langile estatistikak']
-                ])}
+        ['🌍', 'Hizkuntza: Euskara', 'Euskara · Castellano · English'],
+        ['📈', 'Panel korporatiboa', 'Langile estatistikak']
+    ])}
                 <button class="btn danger" onclick="logout()">🚪 Saioa itxi</button>
             </div>
         </section>

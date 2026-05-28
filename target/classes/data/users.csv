@@ -1,0 +1,3 @@
+usuarioID,empresaID,nombre,apellido,email,password,modelococheID,publiCiudad
+1,101,Jon,Urrutia,jon@ecomove.eus,123456,TeslaModel3,Bilbo
+2,101,eneritz,,eneritz.grana@ecomove.eus,1234,Sin coche,Bilbo
