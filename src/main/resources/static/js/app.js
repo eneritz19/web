@@ -11,7 +11,10 @@ const state = {
     companies: [],
     carModels: [],
     tracking: null,
-    activeTrackingMode: 'Autobusa',
+    trackingSessionId: null,
+    trackingTimer: null,
+    lastLocation: null,
+    trackingLocationCount: 0,
     activeRewardCategory: 'Guztiak',
     carpoolTab: 'bilatu'
 };
@@ -539,56 +542,175 @@ function renderHome() {
 
 function renderTracking() {
     const tracking = state.tracking;
+    const last = state.lastLocation;
     const content = `
         <section class="grid-3">
             <article class="card" style="grid-column:span 2">
                 <div class="page-title">
-                    <div><h2>Bidaia trakeatua</h2><p>Aukeratu garraiobidea eta hasi simulazioa</p></div>
+                    <div>
+                        <h2>Bidaia trakeatua</h2>
+                        <p>GPS erreala erabiliz. Garraiobidea ez da erabiltzaileari eskatzen; beste aplikazio batek kalkulatuko du.</p>
+                    </div>
                     <span class="badge ${tracking?.active ? '' : 'warning'}">${tracking?.active ? 'Aktibo' : 'Geldituta'}</span>
                 </div>
-                <div class="grid-4" style="margin-bottom:18px">
-                    <button class="btn secondary" onclick="startTracking('Oinez')">🚶 Oinez</button>
-                    <button class="btn secondary" onclick="startTracking('Bizikleta')">🚲 Bizikleta</button>
-                    <button class="btn secondary" onclick="startTracking('Autobusa')">🚌 Autobusa</button>
-                    <button class="btn secondary" onclick="startTracking('Karpoola')">🚗 Karpoola</button>
-                </div>
                 <div class="grid-4">
-                    <div class="card soft"><small class="label">Modua</small><strong>${tracking?.mode || 'Autobusa'}</strong></div>
-                    <div class="card soft"><small class="label">Distantzia</small><strong>${tracking?.distance || '0.0 km'}</strong></div>
+                    <div class="card soft"><small class="label">Modua</small><strong>${tracking?.mode || 'SIN_CALCULAR'}</strong></div>
+                    <div class="card soft"><small class="label">Distantzia GPS</small><strong>${tracking?.distance || '0.0 km'}</strong></div>
                     <div class="card soft"><small class="label">Iraupena</small><strong>${tracking?.duration || '00:00'}</strong></div>
                     <div class="card soft"><small class="label">Puntuak</small><strong class="color-yellow">${tracking?.points || 0}</strong></div>
                 </div>
-                <div class="actions-row" style="margin-top:20px">
-                    <button class="btn" onclick="startTracking('Autobusa')">▶ Hasi</button>
-                    <button class="btn danger" onclick="stopTracking()">■ Amaitu</button>
+                <div class="grid-2" style="margin-top:18px">
+                    <div class="card soft"><small class="label">Session ID</small><strong style="font-size:13px;word-break:break-all">${escapeHtml(tracking?.sessionId || state.trackingSessionId || '-')}</strong></div>
+                    <div class="card soft"><small class="label">Puntu GPS gordeta</small><strong>${tracking?.samples || state.trackingLocationCount || 0}</strong></div>
                 </div>
+                <div class="actions-row" style="margin-top:20px">
+                    <button class="btn" onclick="startTracking()" ${tracking?.active ? 'disabled' : ''}>▶ Hasi bidaia</button>
+                    <button class="btn danger" onclick="stopTracking()" ${tracking?.active ? '' : 'disabled'}>■ Amaitu bidaia</button>
+                </div>
+                <p style="color:#6b7280;font-weight:700;margin-top:16px">
+                    Al empezar se guarda una primera ubicación y después una ubicación cada minuto en <code>data/ubicaciones_bidaia.csv</code>.
+                </p>
             </article>
             <article class="card bg-green" style="border-color:#bbf7d0">
-                <h2 style="margin-top:0">GPS simulazioa</h2>
-                <p style="font-weight:700;color:#166534">Pantaila hau prest dago gero GPS edo backend erreala konektatzeko.</p>
-                <div style="font-size:90px;text-align:center;margin:30px 0">🗺️</div>
-                <span class="badge">Matomo event: tracking</span>
+                <h2 style="margin-top:0">GPS erreala</h2>
+                <p style="font-weight:700;color:#166534">${tracking?.active ? 'Kokapena minuturo gordetzen ari da.' : 'Sakatu “Hasi bidaia” eta baimendu kokapena.'}</p>
+                <div style="font-size:90px;text-align:center;margin:24px 0">📍</div>
+                <div class="card soft">
+                    <small class="label">Azken kokapena</small>
+                    <p style="margin-bottom:0;font-weight:800">
+                        ${last ? `${last.latitude.toFixed(6)}, ${last.longitude.toFixed(6)}` : 'Oraindik ez dago kokapenik'}
+                    </p>
+                    <small style="color:#6b7280">${last ? escapeHtml(last.timestamp) : ''}</small>
+                </div>
+                <span class="badge" style="margin-top:12px">Matomo event: tracking</span>
             </article>
         </section>
     `;
     shell('tracking', content);
 }
 
-async function startTracking(mode) {
-    state.activeTrackingMode = mode;
-    state.tracking = await api(`/api/tracking/start?mode=${encodeURIComponent(mode)}`, { method: 'POST' });
-    matomoEvent('Tracking', 'start', mode);
-    showToast(`${mode} bidaia hasita`);
-    renderTracking();
+function getCurrentLocation() {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error('Tu navegador no soporta geolocalización.'));
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0
+        });
+    });
+}
+
+function buildLocationPayload(position, sessionId = null) {
+    const coords = position.coords;
+    return {
+        userId: currentUserId(),
+        sessionId,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        accuracy: coords.accuracy,
+        speed: coords.speed,
+        heading: coords.heading,
+        altitude: coords.altitude,
+        timestamp: new Date(position.timestamp || Date.now()).toISOString()
+    };
+}
+
+function updateLastLocation(position) {
+    state.lastLocation = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        timestamp: new Date(position.timestamp || Date.now()).toLocaleString()
+    };
+}
+
+function stopLocationTimer() {
+    if (state.trackingTimer) {
+        clearInterval(state.trackingTimer);
+        state.trackingTimer = null;
+    }
+}
+
+function startLocationTimer() {
+    stopLocationTimer();
+    state.trackingTimer = setInterval(saveCurrentLocationPoint, 60000);
+}
+
+async function saveCurrentLocationPoint() {
+    if (!state.tracking?.active || !state.trackingSessionId) {
+        stopLocationTimer();
+        return;
+    }
+
+    try {
+        const position = await getCurrentLocation();
+        updateLastLocation(position);
+        state.tracking = await api('/api/tracking/location', {
+            method: 'POST',
+            body: JSON.stringify(buildLocationPayload(position, state.trackingSessionId))
+        });
+        state.trackingLocationCount = state.tracking.samples || state.trackingLocationCount + 1;
+
+        if (routes[location.hash] === 'tracking') {
+            renderTracking();
+        }
+    } catch (error) {
+        showToast('No se ha podido guardar la ubicación: ' + error.message);
+    }
+}
+
+async function startTracking() {
+    requireLogin();
+
+    if (state.tracking?.active) {
+        showToast('Ya hay una bidaia activa');
+        return;
+    }
+
+    try {
+        const position = await getCurrentLocation();
+        updateLastLocation(position);
+        state.tracking = await api('/api/tracking/start', {
+            method: 'POST',
+            body: JSON.stringify(buildLocationPayload(position))
+        });
+        state.trackingSessionId = state.tracking.sessionId;
+        state.trackingLocationCount = state.tracking.samples || 1;
+        startLocationTimer();
+        matomoEvent('Tracking', 'start', 'gps');
+        showToast('Bidaia hasita. Kokapena minuturo gordeko da.');
+        renderTracking();
+    } catch (error) {
+        showToast('No se ha podido iniciar el GPS: ' + error.message);
+    }
 }
 
 async function stopTracking() {
+    requireLogin();
+
+    if (!state.tracking?.active || !state.trackingSessionId) {
+        showToast('Ez dago bidaia aktiborik');
+        return;
+    }
+
+    try {
+        // Guardamos una última ubicación justo antes de terminar.
+        await saveCurrentLocationPoint();
+    } catch { }
+
+    stopLocationTimer();
     const userId = currentUserId();
-    const mode = state.tracking?.mode || state.activeTrackingMode || 'Autobusa';
-    state.tracking = await api(`/api/tracking/stop?userId=${userId}&mode=${encodeURIComponent(mode)}`, { method: 'POST' });
+    const sessionId = state.trackingSessionId;
+    state.tracking = await api(`/api/tracking/stop?userId=${userId}&sessionId=${encodeURIComponent(sessionId)}`, { method: 'POST' });
+    state.trackingSessionId = null;
+    state.trackingLocationCount = state.tracking.samples || 0;
     clearLoadedData();
-    matomoEvent('Tracking', 'stop', state.tracking.mode);
-    showToast(`Bidaia amaituta eta data/viajes.csv fitxategian gordeta: ${state.tracking.points} puntu`);
+    matomoEvent('Tracking', 'stop', 'gps');
+    showToast('Bidaia amaituta. Kokapenak CSVn gordeta eta bidaia SIN_CALCULAR moduan sortuta.');
     await ensureData();
     renderTracking();
 }
@@ -939,6 +1061,7 @@ function settingsGroup(title, items) {
 }
 
 function logout() {
+    stopLocationTimer();
     matomoEvent('Auth', 'logout', 'profile');
     localStorage.removeItem('ecomoveUser');
     state.user = null;

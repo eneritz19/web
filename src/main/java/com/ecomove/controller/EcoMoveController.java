@@ -77,8 +77,7 @@ public class EcoMoveController {
     @GetMapping("/transport-stops")
     public List<TransportStop> transportStops(
             @RequestParam(required = false) String proveedor,
-            @RequestParam(required = false) Integer limit
-    ) {
+            @RequestParam(required = false) Integer limit) {
         return service.getTransportStops(proveedor, limit);
     }
 
@@ -90,7 +89,8 @@ public class EcoMoveController {
     @PostMapping("/rewards/redeem")
     public Map<String, Object> redeemReward(@RequestParam long userId, @RequestParam long rewardId) {
         boolean ok = service.redeemReward(userId, rewardId);
-        return Map.of("ok", ok, "message", ok ? "Saria trukatuta" : "Ez dago puntu nahikorik edo saria ez da existitzen");
+        return Map.of("ok", ok, "message",
+                ok ? "Saria trukatuta" : "Ez dago puntu nahikorik edo saria ez da existitzen");
     }
 
     @GetMapping("/route/recommended")
@@ -99,13 +99,18 @@ public class EcoMoveController {
     }
 
     @PostMapping("/tracking/start")
-    public TrackingStatus startTracking(@RequestParam(required = false) String mode) {
-        return service.startTracking(mode);
+    public TrackingStatus startTracking(@RequestBody LocationTrackRequest request) {
+        return service.startTracking(request);
+    }
+
+    @PostMapping("/tracking/location")
+    public TrackingStatus saveTrackingLocation(@RequestBody LocationTrackRequest request) {
+        return service.saveTrackingLocation(request);
     }
 
     @PostMapping("/tracking/stop")
-    public TrackingStatus stopTracking(@RequestParam long userId, @RequestParam(required = false) String mode) {
-        return service.stopTracking(userId, mode);
+    public TrackingStatus stopTracking(@RequestParam long userId, @RequestParam String sessionId) {
+        return service.stopTracking(userId, sessionId);
     }
 
     @PostMapping("/carpool/offers")
@@ -153,5 +158,10 @@ public class EcoMoveController {
     @GetMapping(value = "/csv/transport-stops", produces = "text/csv;charset=UTF-8")
     public String transportStopsCsv() {
         return service.exportCsv("paradas_transporte.csv");
+    }
+
+    @GetMapping(value = "/csv/tracking-locations", produces = "text/csv;charset=UTF-8")
+    public String trackingLocationsCsv() {
+        return service.exportCsv("ubicaciones_bidaia.csv");
     }
 }

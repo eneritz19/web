@@ -6,5 +6,8 @@ public record TrackingStatus(
         String distance,
         String duration,
         String co2Saved,
-        int points
+        int points,
+        String sessionId,
+        int samples,
+        String lastTimestamp
 ) {}
