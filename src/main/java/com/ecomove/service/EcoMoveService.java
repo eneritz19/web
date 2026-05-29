@@ -21,6 +21,8 @@ import java.util.UUID;
 public class EcoMoveService {
 
     private static final String TRIPS_FILE = "viajes.csv";
+    private static final String MUNICIPALITIES_FILE = "municipios.csv";
+    private static final double MAX_MUNICIPALITY_DISTANCE_KM = 20.0;
     private static final String REWARDS_FILE = "recompensas.csv";
     private static final String REDEMPTIONS_FILE = "canjeos.csv";
     private static final String LINES_FILE = "lineas_transporte.csv";
@@ -32,7 +34,27 @@ public class EcoMoveService {
     private static final String LOCATIONS_FILE = "ubicaciones_bidaia.csv";
 
     private static final List<String> TRIP_HEADERS = List.of(
-            "tripID", "userID", "fecha", "origen", "destino", "km", "co2", "modo", "duracionMin", "puntos", "icono");
+            "tripID",
+            "userID",
+            "fecha",
+            "origen",
+            "destino",
+            "km",
+            "co2",
+            "modo",
+            "duracionMin",
+            "puntos",
+            "icono",
+            "sessionID",
+            "startTimestamp",
+            "endTimestamp",
+            "origenLat",
+            "origenLon",
+            "destinoLat",
+            "destinoLon",
+            "duracionSeg",
+            "durationText",
+            "estadoCalculo");
     private static final List<String> REDEMPTION_HEADERS = List.of("redencionID", "userID", "rewardID", "fecha",
             "puntos");
     private static final List<String> OFFER_HEADERS = List.of("offerID", "userID", "origen", "destino", "time", "seats",
@@ -320,30 +342,67 @@ public class EcoMoveService {
         return buildTrackingStatus(request.userId(), request.sessionId(), true);
     }
 
-    public TrackingStatus stopTracking(long userId, String sessionId) {
-        List<Map<String, String>> locations = trackingRows(userId, sessionId);
-        double km = calculateDistanceKm(locations);
-        int durationMin = calculateDurationMinutes(locations);
+    public TrackingStatus stopTracking(long userId, String sessionId, long durationSeconds, String endTimestamp) {
+        String finalEndTimestamp = safe(endTimestamp, Instant.now().toString());
 
-        // El modo queda pendiente porque se calculará en otra aplicación/servicio.
-        // Así no obligamos al usuario a seleccionar transporte al iniciar la ruta.
-        String mode = "SIN_CALCULAR";
-        double co2 = 0.0;
-        int points = 0;
+        List<Map<String, String>> locations = trackingRows(userId, sessionId);
+
+        double km = calculateDistanceKm(locations);
+
+        long finalDurationSeconds = durationSeconds > 0
+                ? durationSeconds
+                : calculateDurationSeconds(locations);
+
+        int durationMin = finalDurationSeconds > 0
+                ? (int) Math.max(1, Math.round(finalDurationSeconds / 60.0))
+                : 0;
+
+        String durationText = formatDurationSeconds(finalDurationSeconds);
+
+        String startTimestamp = locations.isEmpty()
+                ? ""
+                : locations.get(0).getOrDefault("timestamp", "");
+
+        Map<String, String> startLocation = firstTrackingLocation(locations);
+        Map<String, String> endLocation = lastTrackingLocation(locations);
+
+        double startLat = parseDouble(startLocation.get("latitud"));
+        double startLon = parseDouble(startLocation.get("longitud"));
+        double endLat = parseDouble(endLocation.get("latitud"));
+        double endLon = parseDouble(endLocation.get("longitud"));
+
+        String origen = placeNameFromCoordinates(startLat, startLon);
+        String destino = placeNameFromCoordinates(endLat, endLon);
 
         long tripId = csv.nextId(TRIPS_FILE, "tripID");
+
         csv.appendRow(TRIPS_FILE, TRIP_HEADERS, List.of(
                 String.valueOf(tripId),
                 String.valueOf(userId),
                 LocalDate.now().toString(),
-                getUser(userId).puebloCiudad(),
-                "Pendiente de calcular",
-                formatOne(km),
-                formatOne(co2),
-                mode,
+
+                origen,
+                destino,
+
+                "0.0",
+                "0.0",
+                "SIN_CALCULAR",
                 String.valueOf(durationMin),
-                String.valueOf(points),
-                "🧭"));
+                "0",
+                "🧭",
+
+                sessionId,
+                startTimestamp,
+                finalEndTimestamp,
+
+                formatDouble(startLat, 6),
+                formatDouble(startLon, 6),
+                formatDouble(endLat, 6),
+                formatDouble(endLon, 6),
+
+                String.valueOf(finalDurationSeconds),
+                durationText,
+                "PENDIENTE"));
 
         return buildTrackingStatus(userId, sessionId, false);
     }
@@ -416,15 +475,19 @@ public class EcoMoveService {
     }
 
     private double haversineKm(double lat1, double lon1, double lat2, double lon2) {
-        final double earthRadiusKm = 6371.0;
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLon = Math.toRadians(lon2 - lon1);
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                        * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return earthRadiusKm * c;
-    }
+    final double earthRadiusKm = 6371.0;
+
+    double dLat = Math.toRadians(lat2 - lat1);
+    double dLon = Math.toRadians(lon2 - lon1);
+
+    double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+            + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+            * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+    double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return earthRadiusKm * c;
+}
 
     public void offerTrip(long userId, CarpoolOfferRequest request) {
         csv.appendRow(OFFERS_FILE, OFFER_HEADERS, List.of(
@@ -591,16 +654,22 @@ public class EcoMoveService {
     }
 
     private Trip toTrip(Map<String, String> row) {
+        String mode = row.getOrDefault("modo", "SIN_CALCULAR");
+        String status = row.getOrDefault("estadoCalculo", "CALCULADO");
+
         return new Trip(
                 parseLong(row.get("tripID")),
+                row.getOrDefault("sessionID", ""),
                 row.getOrDefault("origen", ""),
                 row.getOrDefault("destino", ""),
                 formatOne(parseDouble(row.get("km"))) + " km",
                 formatOne(parseDouble(row.get("co2"))) + " kg",
-                row.getOrDefault("modo", ""),
+                mode,
+                durationTextFromRow(row),
                 row.getOrDefault("fecha", ""),
-                row.getOrDefault("icono", iconForMode(row.getOrDefault("modo", ""))),
-                "+" + parseInt(row.get("puntos")) + " pts");
+                row.getOrDefault("icono", iconForMode(mode)),
+                "+" + parseInt(row.get("puntos")) + " pts",
+                status);
     }
 
     private int redeemedPoints(long userId) {
@@ -618,6 +687,17 @@ public class EcoMoveService {
         if (points >= 100)
             return "Ekologista";
         return "Hasiberria";
+    }
+
+    private long calculateDurationSeconds(List<Map<String, String>> locations) {
+        if (locations.size() < 2) {
+            return 0;
+        }
+
+        Instant first = parseInstant(locations.get(0).get("timestamp"));
+        Instant last = parseInstant(locations.get(locations.size() - 1).get("timestamp"));
+
+        return Math.max(0, Duration.between(first, last).getSeconds());
     }
 
     private String getInitials(String name) {
@@ -706,6 +786,104 @@ public class EcoMoveService {
         }
     }
 
+    private Map<String, String> firstTrackingLocation(List<Map<String, String>> locations) {
+    if (locations == null || locations.isEmpty()) {
+        return Map.of();
+    }
+
+    return locations.stream()
+            .filter(row -> row.getOrDefault("eventType", "").equalsIgnoreCase("START"))
+            .findFirst()
+            .orElse(locations.get(0));
+}
+
+private Map<String, String> lastTrackingLocation(List<Map<String, String>> locations) {
+    if (locations == null || locations.isEmpty()) {
+        return Map.of();
+    }
+
+    return locations.stream()
+            .filter(row -> row.getOrDefault("eventType", "").equalsIgnoreCase("END"))
+            .reduce((first, second) -> second)
+            .orElse(locations.get(locations.size() - 1));
+}
+
+private String placeNameFromCoordinates(double lat, double lon) {
+    List<Map<String, String>> municipalities = csv.readRows(MUNICIPALITIES_FILE);
+
+    if (municipalities.isEmpty() || lat == 0.0 || lon == 0.0) {
+        return "Pendiente de calcular";
+    }
+
+    String bestName = "Pendiente de calcular";
+    double bestDistance = Double.MAX_VALUE;
+
+    for (Map<String, String> row : municipalities) {
+        double townLat = parseDouble(row.get("latitud"));
+        double townLon = parseDouble(row.get("longitud"));
+
+        double distance = haversineKm(lat, lon, townLat, townLon);
+
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            bestName = row.getOrDefault("municipio", "Pendiente de calcular");
+        }
+    }
+
+    if (bestDistance > MAX_MUNICIPALITY_DISTANCE_KM) {
+        return "Pendiente de calcular";
+    }
+
+    return cleanMunicipalityName(bestName);
+}
+
+private String cleanMunicipalityName(String name) {
+    if (name == null || name.isBlank()) {
+        return "Pendiente de calcular";
+    }
+
+    return switch (name) {
+        case "Arrasate/Mondragón" -> "Arrasate";
+        case "Donostia-San Sebastián" -> "Donostia";
+        case "Soraluze/Placencia de las Armas" -> "Soraluze";
+        case "Urduña/Orduña" -> "Urduña";
+        case "Karrantza Harana/Valle de Carranza" -> "Karrantza";
+        default -> name;
+    };
+}
+
+    private String formatDurationSeconds(long totalSeconds) {
+        totalSeconds = Math.max(0, totalSeconds);
+
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        long seconds = totalSeconds % 60;
+
+        return String.format(java.util.Locale.US, "%02d:%02d:%02d", hours, minutes, seconds);
+    }
+
+    private String durationTextFromRow(Map<String, String> row) {
+        String durationText = row.getOrDefault("durationText", "");
+
+        if (!durationText.isBlank()) {
+            return durationText;
+        }
+
+        long seconds = parseLong(row.get("duracionSeg"));
+
+        if (seconds > 0) {
+            return formatDurationSeconds(seconds);
+        }
+
+        int minutes = parseInt(row.get("duracionMin"));
+
+        if (minutes > 0) {
+            return minutes + " min";
+        }
+
+        return "00:00:00";
+    }
+
     private String safe(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
     }
@@ -735,4 +913,6 @@ public class EcoMoveService {
             return Instant.now();
         }
     }
+
+    
 }

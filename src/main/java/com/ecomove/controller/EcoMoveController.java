@@ -109,8 +109,12 @@ public class EcoMoveController {
     }
 
     @PostMapping("/tracking/stop")
-    public TrackingStatus stopTracking(@RequestParam long userId, @RequestParam String sessionId) {
-        return service.stopTracking(userId, sessionId);
+    public TrackingStatus stopTracking(
+            @RequestParam long userId,
+            @RequestParam String sessionId,
+            @RequestParam(required = false, defaultValue = "0") long durationSeconds,
+            @RequestParam(required = false) String endTimestamp) {
+        return service.stopTracking(userId, sessionId, durationSeconds, endTimestamp);
     }
 
     @PostMapping("/carpool/offers")
